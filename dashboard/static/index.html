@@ -210,41 +210,45 @@
             <div class="lg:col-span-3 saas-card p-4 flex flex-col justify-between">
                 
                 <!-- Scope Toolbar -->
-                <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs">
+                <div class="flex flex-wrap items-center justify-between pb-3 border-b border-slate-800 text-xs gap-3">
                     <div class="flex items-center gap-3">
                         <span class="text-emerald-400 font-bold flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                            LEAD II LIVE SWEEP
+                            LEAD II LIVE TELEMETRY
                         </span>
                         <span class="text-slate-500 font-mono">250 SPS | 25 mm/s | 10 mm/mV</span>
                     </div>
 
                     <!-- Display Filters / Overlay Toggles -->
                     <div class="flex items-center gap-4">
+                        <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700">
+                            <button id="viewModeWindow" onclick="setViewMode('window')" class="px-2.5 py-1 rounded text-xs font-semibold bg-cyan-900 text-cyan-200">Full 10s Window</button>
+                            <button id="viewModeSweep" onclick="setViewMode('sweep')" class="px-2.5 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white">Sweep Monitor</button>
+                        </div>
                         <label class="flex items-center gap-2 cursor-pointer text-slate-300">
-                            <input type="checkbox" id="showRawOverlay" class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0">
-                            <span>Show Raw Overlay (Cyan)</span>
+                            <input type="checkbox" id="showRawOverlay" checked class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0">
+                            <span>Raw Overlay (Cyan)</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer text-slate-300">
                             <input type="checkbox" id="showQrsMarkers" checked class="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
-                            <span>QRS Markers</span>
+                            <span>QRS Peaks</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- Canvas Oscilloscope -->
-                <div class="relative w-full h-[320px] my-3 rounded-lg overflow-hidden ecg-grid-container border border-slate-800">
-                    <canvas id="ecgCanvas" class="w-full h-full block"></canvas>
+                <div class="relative w-full h-[320px] my-3 rounded-lg overflow-hidden ecg-grid-container border border-slate-800" style="min-height: 320px;">
+                    <canvas id="ecgCanvas" width="900" height="320" style="width: 100%; height: 320px; display: block;"></canvas>
                     
                     <!-- Live Sweep Overlay Info -->
-                    <div class="absolute top-3 left-4 font-mono-numbers text-xs text-emerald-400/80 pointer-events-none flex gap-4">
+                    <div class="absolute top-3 left-4 font-mono-numbers text-xs text-emerald-400/90 pointer-events-none flex gap-4 bg-slate-900/60 px-3 py-1 rounded backdrop-blur border border-slate-800/80">
                         <div>ADC: 24-bit SPI</div>
                         <div>Jitter: &lt; 2.4 μs</div>
                         <div id="canvasSeq">Window Seq: #01</div>
                     </div>
 
-                    <div class="absolute bottom-3 right-4 font-mono-numbers text-xs text-slate-400 pointer-events-none">
-                        Standard IEC Calibration Grid
+                    <div class="absolute bottom-3 right-4 font-mono-numbers text-xs text-slate-400 pointer-events-none bg-slate-900/60 px-2 py-0.5 rounded">
+                        Standard IEC Calibration Grid (25mm/s, 10mm/mV)
                     </div>
                 </div>
 
@@ -585,37 +589,38 @@
             }
         });
 
-        // 60 FPS HTML5 Canvas Sweep Monitor
+        // Real-Time Medical ECG Oscilloscope Engine
         const canvas = document.getElementById('ecgCanvas');
         const ctx = canvas.getContext('2d');
         
-        let canvasWidth = 0;
-        let canvasHeight = 0;
         let isFrozen = false;
         let playSpeed = 1.0;
+        let viewMode = 'window'; // 'window' (full 10s view) or 'sweep' (rolling sweep)
 
-        function resizeCanvas() {
-            const rect = canvas.parentElement.getBoundingClientRect();
-            canvas.width = rect.width * window.devicePixelRatio;
-            canvas.height = rect.height * window.devicePixelRatio;
-            canvasWidth = canvas.width;
-            canvasHeight = canvas.height;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        function setViewMode(mode) {
+            viewMode = mode;
+            const btnWindow = document.getElementById('viewModeWindow');
+            const btnSweep = document.getElementById('viewModeSweep');
+            if (mode === 'window') {
+                btnWindow.className = "px-2.5 py-1 rounded text-xs font-semibold bg-cyan-900 text-cyan-200";
+                btnSweep.className = "px-2.5 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white";
+            } else {
+                btnSweep.className = "px-2.5 py-1 rounded text-xs font-semibold bg-cyan-900 text-cyan-200";
+                btnWindow.className = "px-2.5 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white";
+            }
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
 
         // Waveform & Sweep State
         let rawWaveform = [];
         let filteredWaveform = [];
-        let sweepX = 0;
-        let lastY = 0;
-        let lastRawY = 0;
-        let sampleIndex = 0;
         let qrsPeaks = [];
         let currentRecord = "01_clean_normal";
         let auditRecords = [];
         let windowSeq = 1;
+        let playheadIndex = 0;
+        let sweepX = 0;
+        let lastSweepY = 0;
+        let lastSweepRawY = 0;
 
         // Freeze Toggle
         document.getElementById('freezeBtn').addEventListener('click', () => {
@@ -641,22 +646,46 @@
                 : "px-2 py-1 rounded bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700";
         }
 
+        // Auto-sizing helper that never returns 0
+        function getCanvasSize() {
+            const rect = canvas.getBoundingClientRect();
+            const parent = canvas.parentElement;
+            let w = rect.width > 50 ? rect.width : (parent ? parent.clientWidth : 0);
+            let h = rect.height > 50 ? rect.height : (parent ? parent.clientHeight : 0);
+            if (!w || w < 100) w = 900;
+            if (!h || h < 100) h = 320;
+            return { w, h };
+        }
+
+        function ensureCanvasResolution() {
+            const { w, h } = getCanvasSize();
+            const dpr = window.devicePixelRatio || 1;
+            const targetWidth = Math.floor(w * dpr);
+            const targetHeight = Math.floor(h * dpr);
+
+            if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
+                ctx.scale(dpr, dpr);
+                return true;
+            }
+            return false;
+        }
+
         // Fetch Scenario Data
         async function loadScenario(scenarioName) {
             currentRecord = scenarioName;
             try {
                 const res = await fetch(`/api/scenario/${scenarioName}`);
                 const data = await res.json();
-                rawWaveform = data.raw;
-                filteredWaveform = data.filtered;
+                rawWaveform = data.raw || [];
+                filteredWaveform = data.filtered || [];
                 qrsPeaks = data.peaks || [];
-                sampleIndex = 0;
+                playheadIndex = 0;
                 sweepX = 0;
-                
-                // Clear Canvas
-                const cssWidth = canvasWidth / window.devicePixelRatio;
-                const cssHeight = canvasHeight / window.devicePixelRatio;
-                ctx.clearRect(0, 0, cssWidth, cssHeight);
+                lastSweepY = 0;
+                lastSweepRawY = 0;
 
                 // Update UI metadata & cards
                 updateTelemetryCards(data.telemetry);
@@ -846,81 +875,178 @@
             }
         }
 
-        // 60 FPS Sweep Animation Loop
-        function animateScope() {
-            if (!isFrozen && filteredWaveform.length > 0) {
-                const cssWidth = canvasWidth / window.devicePixelRatio;
-                const cssHeight = canvasHeight / window.devicePixelRatio;
-                const centerY = cssHeight / 2;
-                const ampScale = (cssHeight / 2) * 0.55; // Gain scaling for visual clarity
+        // =========================================================================
+        // Bulletproof Rendering Loop (Window Review & Live Oscilloscope Modes)
+        // =========================================================================
+        function drawFrame() {
+            ensureCanvasResolution();
+            const { w: width, h: height } = getCanvasSize();
+            const centerY = height / 2;
+            const ampScale = (height / 2) * 0.60; // 60% of vertical span
 
-                // Advance by number of samples based on speed
-                const step = Math.max(1, Math.round(2 * playSpeed));
-                
-                for (let s = 0; s < step; s++) {
-                    const sample = filteredWaveform[sampleIndex];
-                    const rawSample = rawWaveform[sampleIndex];
+            const showRaw = document.getElementById('showRawOverlay').checked;
+            const showQrs = document.getElementById('showQrsMarkers').checked;
+            const nSamples = filteredWaveform.length;
 
-                    const y = centerY - (sample * ampScale);
-                    const rawY = centerY - (rawSample * ampScale);
+            if (nSamples > 0) {
+                if (viewMode === 'window') {
+                    // MODE 1: FULL 10-SECOND WINDOW VIEW WITH LIVE PLAYHEAD CURSOR
+                    ctx.clearRect(0, 0, width, height);
 
-                    // Clear ahead with a dark decaying sweep band (Medical Monitor look)
-                    const sweepBandWidth = 14;
-                    ctx.clearRect(sweepX, 0, sweepBandWidth, cssHeight);
+                    const dx = width / nSamples;
 
-                    // Check for QRS peak beep
-                    if (qrsPeaks.includes(sampleIndex)) {
-                        playQrsBeep(880);
-                    }
-
-                    // 1. Draw Raw Overlay if enabled
-                    if (document.getElementById('showRawOverlay').checked) {
+                    // 1. Draw Raw Trace if enabled
+                    if (showRaw && rawWaveform.length === nSamples) {
                         ctx.beginPath();
-                        ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
-                        ctx.lineWidth = 1.2;
-                        ctx.moveTo(sweepX - 1, lastRawY || rawY);
-                        ctx.lineTo(sweepX, rawY);
+                        ctx.strokeStyle = "rgba(6, 182, 212, 0.45)";
+                        ctx.lineWidth = 1.3;
+                        for (let i = 0; i < nSamples; i++) {
+                            const x = i * dx;
+                            const y = centerY - (rawWaveform[i] * ampScale);
+                            if (i === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
                         ctx.stroke();
                     }
 
-                    // 2. Draw Main Filtered Trace (Glowing Emerald)
+                    // 2. Draw Candidate Filtered Diagnostic Trace (Neon Emerald Glow)
                     ctx.beginPath();
                     ctx.strokeStyle = "#00ff88";
                     ctx.shadowColor = "#00ff88";
                     ctx.shadowBlur = 6;
-                    ctx.lineWidth = 2.2;
+                    ctx.lineWidth = 2.0;
                     ctx.lineCap = "round";
-                    ctx.moveTo(sweepX - 1, lastY || y);
-                    ctx.lineTo(sweepX, y);
+                    ctx.lineJoin = "round";
+                    for (let i = 0; i < nSamples; i++) {
+                        const x = i * dx;
+                        const y = centerY - (filteredWaveform[i] * ampScale);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
                     ctx.stroke();
-                    ctx.shadowBlur = 0; // Reset blur for performance
+                    ctx.shadowBlur = 0; // reset
 
-                    // 3. Draw QRS Marker tick if enabled
-                    if (document.getElementById('showQrsMarkers').checked && qrsPeaks.includes(sampleIndex)) {
+                    // 3. Draw Detected QRS Peak Pins
+                    if (showQrs && qrsPeaks.length > 0) {
                         ctx.fillStyle = "#ef4444";
-                        ctx.beginPath();
-                        ctx.arc(sweepX, y - 10, 3.5, 0, 2 * Math.PI);
-                        ctx.fill();
+                        for (let p = 0; p < qrsPeaks.length; p++) {
+                            const pIdx = qrsPeaks[p];
+                            if (pIdx >= 0 && pIdx < nSamples) {
+                                const px = pIdx * dx;
+                                const py = centerY - (filteredWaveform[pIdx] * ampScale);
+                                
+                                // Red diamond peak marker
+                                ctx.beginPath();
+                                ctx.arc(px, py - 8, 3.5, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                        }
                     }
 
-                    lastY = y;
-                    lastRawY = rawY;
-                    sweepX += 1.2;
+                    // 4. Draw Animated Vertical Laser Playhead
+                    const curX = playheadIndex * dx;
+                    ctx.strokeStyle = "rgba(6, 182, 212, 0.85)";
+                    ctx.lineWidth = 1.8;
+                    ctx.beginPath();
+                    ctx.moveTo(curX, 0);
+                    ctx.lineTo(curX, height);
+                    ctx.stroke();
 
-                    sampleIndex = (sampleIndex + 1) % filteredWaveform.length;
-                    if (sweepX >= cssWidth) {
-                        sweepX = 0;
-                        lastY = 0;
-                        lastRawY = 0;
+                    // Glowing Head on the Waveform
+                    const curY = centerY - (filteredWaveform[playheadIndex] * ampScale);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.shadowColor = "#06b6d4";
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(curX, curY, 4.5, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    // Playhead Advance & Audio Trigger
+                    if (!isFrozen) {
+                        const advance = Math.max(1, Math.round(4 * playSpeed));
+                        for (let a = 0; a < advance; a++) {
+                            const idx = (playheadIndex + a) % nSamples;
+                            if (qrsPeaks.includes(idx)) {
+                                playQrsBeep(880);
+                            }
+                        }
+                        playheadIndex = (playheadIndex + advance) % nSamples;
+                    }
+
+                } else {
+                    // MODE 2: ROLLING SWEEP MONITOR (TRADITIONAL BEDSIDE)
+                    const step = Math.max(1, Math.round(2 * playSpeed));
+                    
+                    if (!isFrozen) {
+                        for (let s = 0; s < step; s++) {
+                            const sample = filteredWaveform[playheadIndex];
+                            const rawSample = rawWaveform[playheadIndex] || 0;
+
+                            const y = centerY - (sample * ampScale);
+                            const rawY = centerY - (rawSample * ampScale);
+
+                            // Decaying black sweep band ahead
+                            ctx.clearRect(sweepX, 0, 18, height);
+
+                            if (qrsPeaks.includes(playheadIndex)) {
+                                playQrsBeep(880);
+                            }
+
+                            // Raw Trace
+                            if (showRaw) {
+                                ctx.beginPath();
+                                ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+                                ctx.lineWidth = 1.2;
+                                ctx.moveTo(sweepX - 1.2, lastSweepRawY || rawY);
+                                ctx.lineTo(sweepX, rawY);
+                                ctx.stroke();
+                            }
+
+                            // Filtered Trace
+                            ctx.beginPath();
+                            ctx.strokeStyle = "#00ff88";
+                            ctx.shadowColor = "#00ff88";
+                            ctx.shadowBlur = 6;
+                            ctx.lineWidth = 2.2;
+                            ctx.lineCap = "round";
+                            ctx.moveTo(sweepX - 1.2, lastSweepY || y);
+                            ctx.lineTo(sweepX, y);
+                            ctx.stroke();
+                            ctx.shadowBlur = 0;
+
+                            // QRS Pin
+                            if (showQrs && qrsPeaks.includes(playheadIndex)) {
+                                ctx.fillStyle = "#ef4444";
+                                ctx.beginPath();
+                                ctx.arc(sweepX, y - 8, 3.5, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+
+                            lastSweepY = y;
+                            lastSweepRawY = rawY;
+                            sweepX += 1.2;
+
+                            playheadIndex = (playheadIndex + 1) % nSamples;
+                            if (sweepX >= width) {
+                                sweepX = 0;
+                                lastSweepY = 0;
+                                lastSweepRawY = 0;
+                            }
+                        }
                     }
                 }
             }
-            requestAnimationFrame(animateScope);
+
+            requestAnimationFrame(drawFrame);
         }
 
-        // Initialize with default canonical scenario
+        // Initialize immediately
         loadScenario("01_clean_normal");
-        animateScope();
+        requestAnimationFrame(drawFrame);
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>

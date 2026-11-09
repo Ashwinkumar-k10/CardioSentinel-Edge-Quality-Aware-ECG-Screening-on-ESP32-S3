@@ -18,7 +18,7 @@ from typing import Dict, Any, List
 import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 # Ensure repository root is on sys.path
@@ -75,6 +75,11 @@ async def serve_index():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return "<h3>CardioSentinel Server Running. Static assets loading...</h3>"
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return Response(status_code=204)
 
 
 @app.get("/api/health")
