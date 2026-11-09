@@ -28,3 +28,26 @@ firmware/esp32s3/build/
 firmware/esp32s3/sdkconfig
 
 recordings_raw/
+
+# Media & TTS Build Cache
+*.wav
+*.ass
+*.srt
+sync_audio/
+sync_raw/
+demo_audio/
+demo_video_raw/
+grand_jury_audio/
+grand_jury_raw/
+real_ps_audio/
+real_ps_raw/
+test_*.py
+test_*.ps1
+test_*.jpg
+frame_*.jpg
+verified_*.jpg
+check_voices.py
+list_voices.ps1
+temp_test.bin
+scripts/update_readme_demo.py
+

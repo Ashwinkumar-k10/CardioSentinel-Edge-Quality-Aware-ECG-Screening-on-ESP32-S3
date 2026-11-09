@@ -11,7 +11,13 @@
   <a href="https://github.com/espressif/esp-idf"><img src="https://img.shields.io/badge/Framework-ESP--IDF%20%7C%20FreeRTOS-e7352c.svg?style=for-the-badge&logo=freertos" alt="Framework"></a>
   <a href="firmware/esp32s3/models/tinycnn_weights.h"><img src="https://img.shields.io/badge/Edge%20AI-FPU--Accelerated%20FP32%20(<35ms)-4caf50.svg?style=for-the-badge&logo=pytorch" alt="Edge AI"></a>
   <a href="tests/"><img src="https://img.shields.io/badge/Unit%20Tests-16%2F16%20Passing-brightgreen.svg?style=for-the-badge" alt="Tests"></a>
+  <a href="CardioSentinel_Edge_Official_Demo.mp4"><img src="https://img.shields.io/badge/Demo%20Video-1080p%20Synchronized-blueviolet.svg?style=for-the-badge" alt="Demo Video"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-lightgrey.svg?style=for-the-badge" alt="License"></a>
+</p>
+
+<p align="center">
+  🎬 <b><a href="CardioSentinel_Edge_Official_Demo.mp4">Watch Official 1080p Video Demonstration (CardioSentinel_Edge_Official_Demo.mp4)</a></b><br>
+  <i>Full end-to-end audit: Windows PowerShell firmware testing & parity verification, live Uvicorn telemetry gateway launch, and real-time dual-stream screening across all 8 clinical scenarios.</i>
 </p>
 
 ---
