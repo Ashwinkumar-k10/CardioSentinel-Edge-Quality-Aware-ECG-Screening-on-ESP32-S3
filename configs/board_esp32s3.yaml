@@ -1,0 +1,58 @@
+# Hardware Target Profile: ESP32-S3 + TI ADS1292R
+# Single-SoC Wearable Intelligence Specification
+
+mcu:
+  chip: "ESP32-S3"
+  package: "WROOM-1 / N8R8"
+  cores: 2
+  clock_freq_mhz: 240
+  internal_sram_kb: 512
+  internal_sram_usable_kb: 320
+  octal_psram_mb: 8
+  quad_flash_mb: 8
+
+interfaces:
+  ads1292r_spi:
+    spi_host: "SPI2_HOST"
+    mosi_pin: 11
+    miso_pin: 13
+    sclk_pin: 12
+    cs_pin: 10
+    drdy_pin: 4      # Hardware interrupt pin
+    reset_pin: 5
+    pwdn_pin: 6
+    clock_freq_hz: 1000000
+    dma_channel: "SPI_DMA_CH_AUTO"
+    sample_rate_sps: 250
+    gain: 6          # ADS1292R default programmable gain
+
+  ble_telemetry:
+    device_name: "CardioSentinel-Edge"
+    service_uuid: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+    tx_char_uuid: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+    rx_char_uuid: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+    advertising_interval_ms: 100
+    connection_interval_min_ms: 30
+    connection_interval_max_ms: 50
+
+task_core_affinity:
+  acquisition_task:
+    core: 0
+    priority: 24   # Max FreeRTOS priority (hard real-time)
+    stack_bytes: 4096
+  compute_pipeline_task:
+    core: 1        # Dedicated to DSP + TFLite inference
+    priority: 10
+    stack_bytes: 16384
+  telemetry_task:
+    core: 0
+    priority: 5
+    stack_bytes: 4096
+
+memory_budgets:
+  spi_dma_bytes: 2048
+  sliding_window_bytes: 10000   # 2,500 samples * 4 bytes float
+  asqi_scratchpad_bytes: 16384
+  mig_scratchpad_bytes: 16384
+  tensor_arena_bytes: 131072    # 128 KB SRAM
+  telemetry_queue_bytes: 65536  # PSRAM

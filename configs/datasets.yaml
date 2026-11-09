@@ -1,0 +1,42 @@
+# CardioSentinel Dataset Configuration
+# TECHgium Challenge 26 Research Prototype
+
+datasets:
+  cinc2017:
+    name: "PhysioNet / Computing in Cardiology Challenge 2017"
+    url: "https://physionet.org/content/challenge-2017/1.0.0/"
+    target_sampling_rate_hz: 250
+    original_sampling_rate_hz: 300
+    classes:
+      - name: "Normal"
+        symbol: "N"
+        id: 0
+      - name: "Atrial Fibrillation"
+        symbol: "A"
+        id: 1
+      - name: "Other Rhythm"
+        symbol: "O"
+        id: 2
+      - name: "Noisy / Uninterpretable"
+        symbol: "~"
+        id: 3
+    window_length_sec: 10.0
+    window_samples: 2500
+    stride_samples: 625  # 2.5s stride (75% overlap)
+
+  mitbih:
+    name: "MIT-BIH Arrhythmia Database"
+    url: "https://physionet.org/content/mitdb/1.0.0/"
+    target_sampling_rate_hz: 250
+    original_sampling_rate_hz: 360
+    ectopy_classes:
+      - "PVC"
+      - "PAC"
+      - "Normal"
+
+splits:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  stratified_by_patient: true

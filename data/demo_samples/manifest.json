@@ -1,0 +1,42 @@
+{
+  "01_clean_normal": {
+    "description": "Clean Normal Sinus Rhythm (Expected: ACCEPT)",
+    "samples": 2500,
+    "fs": 250
+  },
+  "02_clean_af": {
+    "description": "Atrial Fibrillation (Expected: ACCEPT AF)",
+    "samples": 2500,
+    "fs": 250
+  },
+  "03_clean_other_pvc": {
+    "description": "Ventricular Ectopy / PVC (Expected: REVIEW/ACCEPT Other)",
+    "samples": 2500,
+    "fs": 250
+  },
+  "04_baseline_wander": {
+    "description": "Respiratory Drift (Expected: REVIEW with ASQI flag)",
+    "samples": 2500,
+    "fs": 250
+  },
+  "05_muscle_noise_emg": {
+    "description": "Muscle Tremor Noise (Expected: REVIEW with ASQI flag)",
+    "samples": 2500,
+    "fs": 250
+  },
+  "06_lead_off_flatline": {
+    "description": "Electrode Disconnect (Expected: ABSTAIN Lead-Off)",
+    "samples": 2500,
+    "fs": 250
+  },
+  "07_rail_saturation": {
+    "description": "ADC Rail Saturation (Expected: ABSTAIN Rail)",
+    "samples": 2500,
+    "fs": 250
+  },
+  "08_mig_distortion": {
+    "description": "Filter-induced Distortion Test (Expected: REVIEW MIG)",
+    "samples": 2500,
+    "fs": 250
+  }
+}

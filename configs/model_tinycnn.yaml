@@ -1,0 +1,54 @@
+# TinyCNN Architecture Configuration for ESP32-S3
+# Target: Internal SRAM-resident execution (< 120 KB tensor arena, zero wait states)
+
+model:
+  name: "CardioSentinel_TinyCNN_v1"
+  version: "1.0.0"
+  architecture: "1D-CNN"
+  input_shape: [1, 2500]  # [channels, samples] (10s @ 250 Hz)
+  num_classes: 3         # 0: Normal, 1: Atrial Fibrillation, 2: Other Rhythm
+  classes: ["Normal", "AF", "Other"]
+
+  layers:
+    conv1:
+      out_channels: 16
+      kernel_size: 7
+      stride: 2
+      padding: 3
+    pool1:
+      kernel_size: 2
+      stride: 2
+    conv2:
+      out_channels: 32
+      kernel_size: 5
+      stride: 2
+      padding: 2
+    pool2:
+      kernel_size: 2
+      stride: 2
+    conv3:
+      out_channels: 48
+      kernel_size: 3
+      stride: 2
+      padding: 1
+    global_pool: "adaptive_avg_pool1d"
+    fc1:
+      in_features: 48
+      out_features: 24
+    fc2:
+      in_features: 24
+      out_features: 3
+
+  quantization:
+    target: "INT8"
+    scheme: "symmetric_per_channel"
+    calibration_dataset_size: 200
+
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  epochs: 30
+  early_stopping_patience: 7
+  loss: "focal_or_weighted_ce"
+  class_weights: [1.0, 4.0, 2.0]  # Compensates for AF and Other class imbalance

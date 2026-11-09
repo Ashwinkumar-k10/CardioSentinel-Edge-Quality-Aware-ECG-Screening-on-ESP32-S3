@@ -1,0 +1,20 @@
+idf_component_register(
+    SRCS
+        "app_main.c"
+        "ring_buffer.c"
+        "signal_quality.c"
+        "morphology_guard.c"
+        "inference.c"
+        "decision_engine.c"
+        "ecg_acquire.c"
+        "telemetry.c"
+    INCLUDE_DIRS
+        "."
+        "../models"
+    REQUIRES
+        driver
+        esp_timer
+        freertos
+        log
+        heap
+)

@@ -1,0 +1,26 @@
+{
+  "n_test_samples": 55,
+  "monitored_hours": 0.15,
+  "naive_baseline": {
+    "coverage_pct": 100.0,
+    "arrhythmia_sensitivity_pct": 100.0,
+    "false_alarms_total": 21,
+    "false_alarms_per_hour": 137.45
+  },
+  "cardiosentinel_pipeline": {
+    "coverage_pct": 69.09,
+    "accepted_count": 38,
+    "review_count": 17,
+    "abstain_count": 0,
+    "arrhythmia_sensitivity_pct": 100.0,
+    "false_alarms_total": 0,
+    "false_alarms_per_hour": 0.0,
+    "false_alarm_reduction_pct": 100.0,
+    "truly_missed_arrhythmias_in_accept": 0
+  },
+  "pass_gates": {
+    "coverage_gte_80_pct": false,
+    "zero_sensitivity_degradation": true,
+    "significant_false_alarm_reduction": true
+  }
+}

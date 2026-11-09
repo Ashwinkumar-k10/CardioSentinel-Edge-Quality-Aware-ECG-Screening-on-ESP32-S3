@@ -1,0 +1,28 @@
+# CardioSentinel Calibrated Decision Policy & Quality Thresholds
+# Calibrated on Validation Split to Guarantee Non-Degrading Arrhythmia Sensitivity
+
+asqi:
+  sampling_rate_hz: 250
+  window_samples: 2500
+  adc_vref: 3.3
+  adc_resolution_bits: 24
+  rail_clipping_threshold_fraction: 0.98   # ADC saturation boundary
+  flatline_variance_min: 0.0001           # Below this, electrode disconnected or flatlined
+  max_baseline_drift_mv: 1.2              # Moving median deviation threshold
+  max_high_frequency_complexity: 250.0    # Line-length sum |x[i] - x[i-1]| threshold for severe EMG
+  min_zero_crossing_rate: 0.005           # Low frequency cutoff
+  max_zero_crossing_rate: 0.40            # Excessive high-frequency noise
+  usable_quality_min_score: 0.55          # Composite ASQI score [0.0 - 1.0]
+
+morphology_guard:
+  max_r_peak_shift_ms: 12.0               # Max allowable delta t_R (3 samples @ 250Hz)
+  max_amplitude_attenuation_ratio: 0.25   # >25% QRS peak reduction triggers REVIEW
+  max_envelope_distortion_rmse: 0.20      # RMSE between raw and filtered normalized QRS
+
+triage_policy:
+  temperature: 1.15                       # Platt / Temperature scaling factor
+  accept_confidence_threshold: 0.70       # Min calibrated confidence for ACCEPT
+  margin_ambiguity_threshold: 0.15        # If top1_prob - top2_prob < margin -> REVIEW
+  abstain_on_lead_off: true
+  abstain_on_rail_saturation: true
+  route_morphology_distortion_to_review: true

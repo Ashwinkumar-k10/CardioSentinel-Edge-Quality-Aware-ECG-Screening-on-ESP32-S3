@@ -1,4 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Native test binaries and temp test dumps
+*.exe
+tests/*.bin
+tests/*.exe
+
+# Presentation source binaries
 *.pptx
 *.pdf
+
+# OS junk
 .DS_Store
 Thumbs.db
+ehthumbs.db
+
+# Firmware build dirs
+firmware/esp32s3/build/
+firmware/esp32s3/sdkconfig
