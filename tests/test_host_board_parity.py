@@ -4,6 +4,7 @@ Pytest Suite for Host-vs-Board Parity
 
 import os
 import json
+import shutil
 import subprocess
 import pytest
 import numpy as np
@@ -13,6 +14,8 @@ import numpy as np
 def firmware_binary():
     runner_bin = "tests/firmware_runner.exe" if os.name == "nt" else "tests/firmware_runner"
     if not os.path.exists(runner_bin):
+        if not shutil.which("gcc"):
+            pytest.skip("GCC not found on system PATH. Install MinGW-w64 or GCC to run native C firmware harness tests.")
         cmd = [
             "gcc", "-O2",
             "-I", "firmware/esp32s3/main",

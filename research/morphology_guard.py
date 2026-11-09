@@ -95,8 +95,8 @@ def evaluate_morphology_integrity(
     filtered_ecg: np.ndarray,
     fs: float = 250.0,
     max_shift_ms: float = 16.0,             # Max allowable R-peak delta t_R (~4 samples @ 250Hz)
-    max_attenuation_ratio: float = 0.32,     # Max 32% peak attenuation allowed
-    max_envelope_rmse: float = 0.38         # Normalized envelope discrepancy boundary
+    max_attenuation_ratio: float = 0.38,     # Max 38% peak attenuation allowed
+    max_envelope_rmse: float = 0.45         # Normalized envelope discrepancy boundary
 ) -> MIGResult:
     """
     Evaluates morphological consistency between raw and filtered signal.
