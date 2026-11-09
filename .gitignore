@@ -25,3 +25,5 @@ ehthumbs.db
 # Firmware build dirs
 firmware/esp32s3/build/
 firmware/esp32s3/sdkconfig
+
+recordings_raw/
