@@ -4,10 +4,29 @@ TECHgium Challenge 26 Research Prototype
 """
 
 import os
+import sys
 import math
 import numpy as np
-from scipy import signal
 from typing import Tuple, Dict, Any, Optional, List
+
+def _safe_import_scipy_signal():
+    try:
+        stderr_fd = sys.stderr.fileno()
+        saved_stderr = os.dup(stderr_fd)
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, stderr_fd)
+        os.close(devnull)
+        try:
+            from scipy import signal
+            _ = signal.resample_poly
+            return signal, True
+        finally:
+            os.dup2(saved_stderr, stderr_fd)
+            os.close(saved_stderr)
+    except Exception:
+        return None, False
+
+signal, HAVE_SCIPY = _safe_import_scipy_signal()
 
 
 def resample_ecg(
@@ -17,18 +36,23 @@ def resample_ecg(
 ) -> np.ndarray:
     """
     Resample ECG signal to target_fs (default 250 Hz) using polyphase filtering
-    with anti-aliasing.
+    with anti-aliasing (falls back to linear interpolation if SciPy is unavailable).
     """
     if abs(original_fs - target_fs) < 1e-3:
         return signal_data.astype(np.float32)
 
-    # Calculate rational approximation for resample_poly
-    gcd = math.gcd(int(round(original_fs)), int(round(target_fs)))
-    up = int(round(target_fs)) // gcd
-    down = int(round(original_fs)) // gcd
-
-    resampled = signal.resample_poly(signal_data, up, down, axis=-1)
-    return resampled.astype(np.float32)
+    if HAVE_SCIPY:
+        gcd = math.gcd(int(round(original_fs)), int(round(target_fs)))
+        up = int(round(target_fs)) // gcd
+        down = int(round(original_fs)) // gcd
+        resampled = signal.resample_poly(signal_data, up, down, axis=-1)
+        return resampled.astype(np.float32)
+    else:
+        new_len = int(round(len(signal_data) * target_fs / original_fs))
+        x_old = np.linspace(0.0, 1.0, len(signal_data), endpoint=False)
+        x_new = np.linspace(0.0, 1.0, new_len, endpoint=False)
+        resampled = np.interp(x_new, x_old, signal_data)
+        return resampled.astype(np.float32)
 
 
 def generate_synthetic_ecg(

@@ -11,7 +11,6 @@ import yaml
 import numpy as np
 import torch
 import torch.nn as nn
-from scipy.optimize import minimize
 from typing import Dict, Any, Tuple
 
 from research.models_tiny import CardioSentinelTinyCNN

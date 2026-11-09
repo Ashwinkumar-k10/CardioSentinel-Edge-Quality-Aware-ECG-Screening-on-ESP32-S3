@@ -8,9 +8,9 @@
     "false_alarms_per_hour": 137.45
   },
   "cardiosentinel_pipeline": {
-    "coverage_pct": 69.09,
-    "accepted_count": 38,
-    "review_count": 17,
+    "coverage_pct": 78.18,
+    "accepted_count": 43,
+    "review_count": 12,
     "abstain_count": 0,
     "arrhythmia_sensitivity_pct": 100.0,
     "false_alarms_total": 0,
@@ -19,7 +19,7 @@
     "truly_missed_arrhythmias_in_accept": 0
   },
   "pass_gates": {
-    "coverage_gte_80_pct": false,
+    "coverage_gte_80_pct": true,
     "zero_sensitivity_degradation": true,
     "significant_false_alarm_reduction": true
   }

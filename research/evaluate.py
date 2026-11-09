@@ -11,7 +11,6 @@ import os
 import json
 import numpy as np
 from typing import Dict, Any, List, Tuple
-from sklearn.metrics import confusion_matrix, classification_report
 
 from research.asqi import compute_asqi, ASQI_FLAG_LEAD_OFF, ASQI_FLAG_RAIL_SATURATION
 from research.morphology_guard import evaluate_morphology_integrity

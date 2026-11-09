@@ -12,6 +12,7 @@ build/
 *.exe
 tests/*.bin
 tests/*.exe
+tests/firmware_runner
 
 # Presentation source binaries
 *.pptx
