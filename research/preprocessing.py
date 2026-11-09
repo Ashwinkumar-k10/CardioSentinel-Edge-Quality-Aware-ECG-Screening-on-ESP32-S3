@@ -3,43 +3,29 @@ CardioSentinel Edge - Signal Preprocessing & Filtering Module
 TECHgium Challenge 26 Research Prototype
 """
 
+import os
+import sys
 import numpy as np
 from typing import Tuple, Dict, Any
 
-try:
-    from scipy import signal
-    _SCIPY_AVAILABLE = True
-except (ImportError, AttributeError):
-    signal = None
-    _SCIPY_AVAILABLE = False
+def _safe_import_scipy_signal():
+    try:
+        stderr_fd = sys.stderr.fileno()
+        saved_stderr = os.dup(stderr_fd)
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, stderr_fd)
+        os.close(devnull)
+        try:
+            from scipy import signal
+            _ = signal.butter
+            return signal, True
+        finally:
+            os.dup2(saved_stderr, stderr_fd)
+            os.close(saved_stderr)
+    except Exception:
+        return None, False
 
-
-def pure_numpy_conservative_filter(data: np.ndarray) -> np.ndarray:
-    """
-    Zero-dependency 5-point moving average filter matching exact ESP32-S3 firmware C
-    implementation in firmware/esp32s3/main/app_main.c.
-    Preserves diagnostic ECG band while attenuating high-frequency noise and baseline offset.
-    """
-    x = np.asarray(data, dtype=np.float32)
-    n = len(x)
-    if n < 5:
-        return np.copy(x)
-    
-    filt = np.empty_like(x)
-    filt[0] = x[0]
-    filt[1] = x[1]
-    filt[-2] = x[-2]
-    filt[-1] = x[-1]
-
-    # Symmetric weights: [0.1, 0.2, 0.4, 0.2, 0.1]
-    filt[2:-2] = (
-        0.1 * x[:-4] +
-        0.2 * x[1:-3] +
-        0.4 * x[2:-2] +
-        0.2 * x[3:-1] +
-        0.1 * x[4:]
-    )
-    return filt.astype(np.float32)
+signal, HAVE_SCIPY = _safe_import_scipy_signal()
 
 
 def butter_bandpass_filter(
@@ -51,20 +37,32 @@ def butter_bandpass_filter(
 ) -> np.ndarray:
     """
     Standard 2nd-order Butterworth bandpass filter.
-    Falls back to pure-NumPy firmware-matched filter if SciPy is unavailable.
+    Preserves diagnostic ECG band (0.5 to 40 Hz) while attenuating low-frequency
+    drift and high-frequency muscle noise.
+    Falls back to zero-phase FIR matching firmware app_main.c if SciPy is unavailable.
     """
-    if not _SCIPY_AVAILABLE or signal is None:
-        return pure_numpy_conservative_filter(data)
-
-    try:
+    raw = np.asarray(data, dtype=np.float32)
+    if HAVE_SCIPY:
         nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
         b, a = signal.butter(order, [low, high], btype='band')
-        filtered = signal.filtfilt(b, a, data, axis=-1)
+        filtered = signal.filtfilt(b, a, raw, axis=-1)
         return filtered.astype(np.float32)
-    except Exception:
-        return pure_numpy_conservative_filter(data)
+    else:
+        # Zero-phase moving-average detrending + 5-point smoothing (matching embedded C firmware)
+        k_dc = max(3, int(fs * 0.8))
+        cumsum = np.cumsum(np.insert(raw, 0, 0))
+        dc = (cumsum[k_dc:] - cumsum[:-k_dc]) / k_dc
+        pad_front = k_dc // 2
+        pad_back = len(raw) - len(dc) - pad_front
+        dc_padded = np.pad(dc, (pad_front, pad_back), mode='edge')
+        detrended = raw - dc_padded
+        
+        # 5-point smoothing kernel: [0.1, 0.2, 0.4, 0.2, 0.1]
+        kernel = np.array([0.1, 0.2, 0.4, 0.2, 0.1], dtype=np.float32)
+        filtered = np.convolve(detrended, kernel, mode='same')
+        return filtered.astype(np.float32)
 
 
 def notch_filter(
@@ -75,19 +73,14 @@ def notch_filter(
 ) -> np.ndarray:
     """
     IIR Notch filter to remove 50 Hz (or 60 Hz) powerline mains interference.
-    Falls back to pure-NumPy filter if SciPy is unavailable.
     """
-    if not _SCIPY_AVAILABLE or signal is None:
-        return pure_numpy_conservative_filter(data)
-
-    try:
+    if HAVE_SCIPY:
         nyq = 0.5 * fs
         freq = notch_freq / nyq
         b, a = signal.iirnotch(freq, quality_factor)
         filtered = signal.filtfilt(b, a, data, axis=-1)
         return filtered.astype(np.float32)
-    except Exception:
-        return pure_numpy_conservative_filter(data)
+    return data.astype(np.float32)
 
 
 def moving_median_baseline_removal(
@@ -102,24 +95,17 @@ def moving_median_baseline_removal(
     if window_samples % 2 == 0:
         window_samples += 1
     
-    if _SCIPY_AVAILABLE and signal is not None and hasattr(signal, 'medfilt'):
-        try:
-            baseline = signal.medfilt(data, kernel_size=window_samples)
-            corrected = data - baseline
-            return corrected.astype(np.float32)
-        except Exception:
-            pass
-
-    # Pure NumPy block mean baseline removal fallback
-    k = max(3, window_samples)
-    cumsum = np.cumsum(np.insert(data, 0, 0))
-    # Approximate baseline via sliding average
-    half = k // 2
-    padded = np.pad(data, (half, half), mode='edge')
-    cumsum_pad = np.cumsum(np.insert(padded, 0, 0))
-    baseline = (cumsum_pad[k:] - cumsum_pad[:-k]) / k
-    corrected = data - baseline[:len(data)]
-    return corrected.astype(np.float32)
+    if HAVE_SCIPY:
+        baseline = signal.medfilt(data, kernel_size=window_samples)
+        corrected = data - baseline
+        return corrected.astype(np.float32)
+    else:
+        cumsum = np.cumsum(np.insert(data, 0, 0))
+        baseline = (cumsum[window_samples:] - cumsum[:-window_samples]) / window_samples
+        pad_front = window_samples // 2
+        pad_back = len(data) - len(baseline) - pad_front
+        baseline_padded = np.pad(baseline, (pad_front, pad_back), mode='edge')
+        return (data - baseline_padded).astype(np.float32)
 
 
 def prepare_dual_stream_ecg(
@@ -138,7 +124,7 @@ def prepare_dual_stream_ecg(
     filtered = butter_bandpass_filter(raw_copy, lowcut=0.5, highcut=40.0, fs=fs)
     
     # 2. Notch filter for powerline if enabled
-    if apply_notch and _SCIPY_AVAILABLE:
+    if apply_notch:
         filtered = notch_filter(filtered, notch_freq=50.0, fs=fs)
         
     return raw_copy, filtered.astype(np.float32)

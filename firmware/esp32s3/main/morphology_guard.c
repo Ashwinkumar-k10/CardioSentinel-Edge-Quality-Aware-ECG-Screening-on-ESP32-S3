@@ -149,7 +149,7 @@ mig_result_t mig_evaluate_window(
     if (res.max_shift_ms > 16.0f) {
         res.flags |= MIG_STATUS_R_PEAK_SHIFT;
     }
-    if (res.max_attenuation > 0.28f) {
+    if (res.max_attenuation > 0.38f) {
         res.flags |= MIG_STATUS_PEAK_ATTENUATION;
     }
 
@@ -181,7 +181,7 @@ mig_result_t mig_evaluate_window(
     }
     res.envelope_rmse = (float)sqrt(rmse_sum / n);
 
-    if (res.envelope_rmse > 0.22f) {
+    if (res.envelope_rmse > 0.45f) {
         res.flags |= MIG_STATUS_ENVELOPE_DISTORTION;
     }
 

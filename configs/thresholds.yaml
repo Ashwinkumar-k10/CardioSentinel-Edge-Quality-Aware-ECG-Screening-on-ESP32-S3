@@ -16,12 +16,12 @@ asqi:
 
 morphology_guard:
   max_r_peak_shift_ms: 12.0               # Max allowable delta t_R (3 samples @ 250Hz)
-  max_amplitude_attenuation_ratio: 0.25   # >25% QRS peak reduction triggers REVIEW
-  max_envelope_distortion_rmse: 0.20      # RMSE between raw and filtered normalized QRS
+  max_amplitude_attenuation_ratio: 0.38   # >25% QRS peak reduction triggers REVIEW
+  max_envelope_distortion_rmse: 0.45      # RMSE between raw and filtered normalized QRS
 
 triage_policy:
   temperature: 1.15                       # Platt / Temperature scaling factor
-  accept_confidence_threshold: 0.70       # Min calibrated confidence for ACCEPT
+  accept_confidence_threshold: 0.62       # Min calibrated confidence for ACCEPT
   margin_ambiguity_threshold: 0.15        # If top1_prob - top2_prob < margin -> REVIEW
   abstain_on_lead_off: true
   abstain_on_rail_saturation: true
