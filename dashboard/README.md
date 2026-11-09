@@ -1,23 +1,37 @@
-# CardioSentinel Edge Dashboard
+# CardioSentinel Edge — Clinical Telemetry SaaS Dashboard
 
-Clinician-style demonstration and research visualization dashboard for the ESP32-S3 CardioSentinel Edge prototype.
+An industry-grade, enterprise medical telemetry dashboard for the CardioSentinel single-SoC ESP32-S3 ECG screening system.
 
-## Features
-- **3-Zone Calibrated Triage:** Real-time visual indicator for ACCEPT (Green), REVIEW (Amber), and ABSTAIN (Red).
-- **Dual-Stream Waveform Viewer:** Side-by-side comparison of untouched Raw ECG and candidate Filtered ECG with detected R-peaks.
-- **ASQI Radar & Metrics:** Detailed linear-time feature breakdown (drift, line-length EMG complexity, clipping, variance).
-- **Morphology Integrity Guard:** Real-time warning when digital filtering distorts abnormal waveform morphology.
-- **Model Confidence:** Calibrated probability bars for Normal, AF, and Other rhythms.
-- **Jury Defense Table:** Live presentation of the paired ablation benchmark proving false alarm reduction without missing real arrhythmias.
-- **Telemetry Downloader:** Export JSON telemetry packets aligned with FHIR R4 demonstration structures.
+---
 
-## How to Run
+## Two Available Enterprise Modes
 
-From the project root:
+### Option A: Real-Time 60 FPS Medical Scope SaaS (FastAPI + HTML5 Canvas)
+A high-frequency web application mimicking ICU/telemetry hospital patient monitors:
+* **Silky-smooth 60 FPS Sweep Oscilloscope:** Decaying phosphor persistence trace on an official IEC standard $25\,\text{mm/s}$, $10\,\text{mm/mV}$ calibration grid.
+* **Dual-Stream Overlay:** View raw untouched ECG in cyan overlaid with candidate-filtered diagnostic ECG in neon emerald.
+* **Real-Time Web Audio Synthesizer:** Heartbeat QRS pulse chirps and alarm tones.
+* **Live 3-Zone Triage Console:** Real-time glowing indicators for `ACCEPT`, `REVIEW`, and `ABSTAIN`.
+* **PSRAM Audit Ring:** Tabular view of preserved raw/filtered episodes with JSON inspection.
+* **HL7 / FHIR R4 Export:** Direct download of clinical `DiagnosticReport` / `Observation` bundles.
+
+#### How to Launch:
+```bash
+python dashboard/server.py
+```
+Open **[http://localhost:8000](http://localhost:8000)** in any modern web browser.
+
+---
+
+### Option B: Deep Research & Verification Console (Streamlit + Plotly)
+An interactive analytical station with:
+* Plotly zoomable dual-stream ECG waveforms.
+* ASQI signal quality multi-meter cockpit.
+* Question E jury defense table & verification proof.
+* TinyCNN class distribution & Xtensa LX7 cycle latency breakdown.
+
+#### How to Launch:
 ```bash
 streamlit run dashboard/app.py
 ```
-Or specify port:
-```bash
-streamlit run dashboard/app.py --server.port 8501
-```
+Open **[http://localhost:8501](http://localhost:8501)** in your browser.

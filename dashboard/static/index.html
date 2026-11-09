@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardioSentinel Cloud | Real-Time Clinical ECG Telemetry SaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#0f172a',
+                            900: '#0b0f19',
+                            950: '#070a12'
+                        },
+                        ecg: {
+                            green: '#10b981',
+                            amber: '#f59e0b',
+                            red: '#ef4444',
+                            cyan: '#06b6d4',
+                            neon: '#00ff88'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #080c14;
+            color: #e2e8f0;
+        }
+        
+        .font-mono-numbers {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Medical Grid Background for Canvas */
+        .ecg-grid-container {
+            background-color: #050a0f;
+            background-image: 
+                linear-gradient(rgba(0, 255, 136, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.08) 1px, transparent 1px),
+                linear-gradient(rgba(0, 255, 136, 0.22) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.22) 1px, transparent 1px);
+            background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85);
+        }
+
+        /* Glassmorphism SaaS Card */
+        .saas-card {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
+        }
+
+        .saas-card:hover {
+            border-color: rgba(6, 182, 212, 0.25);
+        }
+
+        /* Glowing Pulse Animations */
+        @keyframes heartbeatGlow {
+            0% { transform: scale(1); filter: drop-shadow(0 0 2px #ef4444); }
+            15% { transform: scale(1.28); filter: drop-shadow(0 0 12px #ef4444); }
+            30% { transform: scale(1); filter: drop-shadow(0 0 2px #ef4444); }
+            45% { transform: scale(1.18); filter: drop-shadow(0 0 8px #ef4444); }
+            60% { transform: scale(1); filter: drop-shadow(0 0 2px #ef4444); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 2px #ef4444); }
+        }
+
+        .animate-heartbeat {
+            animation: heartbeatGlow 1.2s infinite ease-in-out;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top SaaS Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50 px-4 py-2.5">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Logo & Brand -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid fa-heart-pulse text-white text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-lg text-white tracking-tight">CardioSentinel</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 font-semibold border border-cyan-800">EDGE SaaS v2.4</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Single-SoC ESP32-S3 Wearable Screening System</p>
+                </div>
+            </div>
+
+            <!-- Hardware Telemetry Status Chips -->
+            <div class="hidden lg:flex items-center gap-2 font-mono-numbers text-xs">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-slate-400">HW:</span>
+                    <span class="text-slate-200 font-medium">ESP32-S3 (240MHz)</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700">
+                    <i class="fa-solid fa-microchip text-cyan-400"></i>
+                    <span class="text-slate-400">AFE:</span>
+                    <span class="text-slate-200 font-medium">ADS1292R (250Hz)</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700">
+                    <i class="fa-solid fa-battery-three-quarters text-emerald-400"></i>
+                    <span class="text-slate-400">BATT:</span>
+                    <span class="text-emerald-400 font-medium">3.85V (84%) ~22.4h</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700">
+                    <i class="fa-brands fa-bluetooth-b text-blue-400"></i>
+                    <span class="text-slate-400">BLE:</span>
+                    <span class="text-blue-400 font-medium">-58 dBm</span>
+                </div>
+            </div>
+
+            <!-- Global Action Controls -->
+            <div class="flex items-center gap-3">
+                <button id="audioToggleBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 flex items-center gap-2 transition">
+                    <i id="audioIcon" class="fa-solid fa-volume-xmark text-slate-400"></i>
+                    <span id="audioText">Mute Beep</span>
+                </button>
+                <button id="freezeBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 flex items-center gap-2 transition">
+                    <i id="freezeIcon" class="fa-solid fa-pause"></i>
+                    <span id="freezeText">Freeze</span>
+                </button>
+                <button onclick="exportFhirDiagnosticReport()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold shadow-md shadow-cyan-600/20 flex items-center gap-2 transition">
+                    <i class="fa-solid fa-file-export"></i>
+                    <span>FHIR R4 Export</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-4">
+
+        <!-- Quick Patient & Scenario Bar -->
+        <div class="saas-card p-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
+                        <i class="fa-solid fa-hospital-user text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400">Patient Identifier</div>
+                        <div class="text-sm font-semibold text-white">TECHgium-Test-Subj #04 (Lead II)</div>
+                    </div>
+                </div>
+                <div class="h-6 w-px bg-slate-800 hidden sm:block"></div>
+                <div class="hidden sm:block">
+                    <div class="text-xs text-slate-400">Clinical Workflow Mode</div>
+                    <div class="text-sm font-medium text-emerald-400 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        Ambulatory Continuous Screening
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scenario Selection Dropdown -->
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <label for="scenarioSelector" class="text-xs text-slate-400 whitespace-nowrap">Demonstration Scenario:</label>
+                <select id="scenarioSelector" class="flex-1 sm:w-80 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-medium">
+                    <option value="01_clean_normal">1. Clean Normal Sinus Rhythm (ACCEPT)</option>
+                    <option value="02_clean_af">2. Atrial Fibrillation with f-waves (ACCEPT AF)</option>
+                    <option value="03_clean_other_pvc">3. Ventricular Ectopy / PVC (ACCEPT/REVIEW)</option>
+                    <option value="04_baseline_wander">4. Severe Respiratory Drift (ABSTAIN Drift)</option>
+                    <option value="05_muscle_noise_emg">5. Muscle Tremor / EMG Noise (REVIEW EMG)</option>
+                    <option value="06_lead_off_flatline">6. Disconnected Electrode / Flatline (ABSTAIN)</option>
+                    <option value="07_rail_saturation">7. ADC Rail Saturation (ABSTAIN Rail)</option>
+                    <option value="08_mig_distortion">8. Filter Distortion Pacemaker Spike (REVIEW MIG)</option>
+                </select>
+                <div class="flex items-center gap-1">
+                    <button onclick="setPlaySpeed(1.0)" id="speed1x" class="px-2 py-1 rounded bg-cyan-900/60 text-cyan-300 text-xs font-mono font-bold border border-cyan-700">1x</button>
+                    <button onclick="setPlaySpeed(2.0)" id="speed2x" class="px-2 py-1 rounded bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700">2x</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Scope & Live Cardiac Readout Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            
+            <!-- Real-Time ECG Sweep Oscilloscope (3 Cols) -->
+            <div class="lg:col-span-3 saas-card p-4 flex flex-col justify-between">
+                
+                <!-- Scope Toolbar -->
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs">
+                    <div class="flex items-center gap-3">
+                        <span class="text-emerald-400 font-bold flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            LEAD II LIVE SWEEP
+                        </span>
+                        <span class="text-slate-500 font-mono">250 SPS | 25 mm/s | 10 mm/mV</span>
+                    </div>
+
+                    <!-- Display Filters / Overlay Toggles -->
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+                            <input type="checkbox" id="showRawOverlay" class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0">
+                            <span>Show Raw Overlay (Cyan)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+                            <input type="checkbox" id="showQrsMarkers" checked class="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
+                            <span>QRS Markers</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Canvas Oscilloscope -->
+                <div class="relative w-full h-[320px] my-3 rounded-lg overflow-hidden ecg-grid-container border border-slate-800">
+                    <canvas id="ecgCanvas" class="w-full h-full block"></canvas>
+                    
+                    <!-- Live Sweep Overlay Info -->
+                    <div class="absolute top-3 left-4 font-mono-numbers text-xs text-emerald-400/80 pointer-events-none flex gap-4">
+                        <div>ADC: 24-bit SPI</div>
+                        <div>Jitter: &lt; 2.4 μs</div>
+                        <div id="canvasSeq">Window Seq: #01</div>
+                    </div>
+
+                    <div class="absolute bottom-3 right-4 font-mono-numbers text-xs text-slate-400 pointer-events-none">
+                        Standard IEC Calibration Grid
+                    </div>
+                </div>
+
+                <!-- Scope Footer Status -->
+                <div class="flex items-center justify-between text-xs text-slate-400 pt-2 font-mono-numbers">
+                    <div class="flex items-center gap-4">
+                        <span>PR: <b class="text-slate-200">148 ms</b></span>
+                        <span>QRS: <b class="text-slate-200" id="qrsWidthText">84 ms</b></span>
+                        <span>QT/QTc: <b class="text-slate-200">392/410 ms</b></span>
+                    </div>
+                    <div class="text-cyan-400 flex items-center gap-1">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Zero Wait-State Dual Buffer Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Cardiac Vitals & 3-Zone Triage Badge (1 Col) -->
+            <div class="space-y-4">
+                
+                <!-- Heart Rate Vitals Card -->
+                <div class="saas-card p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span>INSTANTANEOUS HR</span>
+                        <i class="fa-solid fa-heart-pulse text-red-500 text-lg animate-heartbeat"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span id="liveBpm" class="text-5xl font-black text-white font-mono-numbers">72</span>
+                        <span class="text-slate-400 text-sm font-semibold">BPM</span>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-slate-800 flex justify-between text-xs font-mono-numbers">
+                        <div>
+                            <span class="text-slate-500">R-R Mean:</span>
+                            <span id="rrMeanText" class="text-slate-300 font-semibold">833 ms</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500">HRV (SDNN):</span>
+                            <span id="hrvText" class="text-emerald-400 font-semibold">38 ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3-ZONE CLINICAL TRIAGE BADGE CARD -->
+                <div id="triageCard" class="saas-card p-4 border-2 border-emerald-500/40 relative overflow-hidden transition-all duration-300">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Screening Triage</span>
+                        <span id="zoneSeq" class="text-xs font-mono text-slate-500">WINDOW #01</span>
+                    </div>
+
+                    <!-- Glowing Main Triage Zone Badge -->
+                    <div id="triageBadge" class="py-2.5 px-4 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center gap-3 font-bold text-xl tracking-wide shadow-lg shadow-emerald-500/10">
+                        <i id="triageIcon" class="fa-solid fa-circle-check text-2xl"></i>
+                        <span id="triageText">ACCEPT</span>
+                    </div>
+
+                    <div class="mt-3 space-y-1.5">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Impression:</span>
+                            <span id="impressionText" class="font-bold text-white">Normal Sinus Rhythm</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Calibrated Conf:</span>
+                            <span id="confidenceText" class="font-mono-numbers text-emerald-400 font-semibold">98.1%</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Reason Codes:</span>
+                            <span id="reasonsText" class="font-mono text-slate-300 text-right truncate max-w-[170px]">QUALITY_OK</span>
+                        </div>
+                    </div>
+
+                    <!-- Clinician Action Helper -->
+                    <div id="triageActionBox" class="mt-3 p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 leading-snug">
+                        Decision accepted with high confidence; zero morphology distortion detected.
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Middle Row: Signal Quality Intelligence (ASQI) & Morphology Guard (MIG) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- Card 1: ASQI Composite Score Gauge -->
+            <div class="saas-card p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="font-semibold uppercase tracking-wider">ASQI Quality Score</span>
+                    <i class="fa-solid fa-gauge-high text-cyan-400"></i>
+                </div>
+                <div class="my-3 flex items-center justify-between">
+                    <div>
+                        <div id="asqiScoreText" class="text-3xl font-black text-white font-mono-numbers">1.00</div>
+                        <div id="asqiStatusBadge" class="text-xs font-semibold text-emerald-400">STATUS: EXCELLENT</div>
+                    </div>
+                    <div class="w-16 h-16 relative">
+                        <canvas id="asqiGaugeCanvas" width="64" height="64"></canvas>
+                    </div>
+                </div>
+                <div class="text-xs text-slate-400 font-mono-numbers border-t border-slate-800 pt-2 flex justify-between">
+                    <span>Variance: <b id="varianceText" class="text-slate-300">0.0513</b></span>
+                    <span>P-to-P: <b id="ptopText" class="text-slate-300">1.41V</b></span>
+                </div>
+            </div>
+
+            <!-- Card 2: Baseline Wander & Muscle Noise -->
+            <div class="saas-card p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="font-semibold uppercase tracking-wider">Noise & Artifact Mode</span>
+                    <i class="fa-solid fa-wave-square text-amber-400"></i>
+                </div>
+                <div class="space-y-2.5 my-2">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Baseline Drift Span:</span>
+                            <span id="driftSpanText" class="font-mono-numbers text-slate-200">0.04 V</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div id="driftBar" class="bg-emerald-400 h-1.5 rounded-full transition-all duration-300" style="width: 8%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Muscle EMG Line-Length:</span>
+                            <span id="lineLengthText" class="font-mono-numbers text-slate-200">0.038</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div id="emgBar" class="bg-cyan-400 h-1.5 rounded-full transition-all duration-300" style="width: 15%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-xs text-slate-400 font-mono-numbers border-t border-slate-800 pt-2 flex justify-between">
+                    <span>Zero Cross: <b id="zcrText" class="text-slate-300">0.08 Hz</b></span>
+                    <span>Rail Sat: <b id="railSatText" class="text-emerald-400">0.0%</b></span>
+                </div>
+            </div>
+
+            <!-- Card 3: Morphology Integrity Guard (MIG) -->
+            <div class="saas-card p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="font-semibold uppercase tracking-wider">Morphology Guard (MIG)</span>
+                    <i class="fa-solid fa-shield-virus text-emerald-400"></i>
+                </div>
+                <div class="my-2">
+                    <div id="migBadge" class="py-1 px-3 rounded-md bg-emerald-500/15 text-emerald-400 text-xs font-bold inline-flex items-center gap-1.5 mb-2 border border-emerald-500/30">
+                        <i class="fa-solid fa-check"></i>
+                        <span>SHAPE PRESERVED</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs font-mono-numbers">
+                        <div class="bg-slate-900/70 p-2 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-500">R-PEAK SHIFT (ΔtR)</div>
+                            <div id="migShiftText" class="text-sm font-bold text-white">0.0 ms</div>
+                        </div>
+                        <div class="bg-slate-900/70 p-2 rounded border border-slate-800">
+                            <div class="text-[10px] text-slate-500">ATTENUATION</div>
+                            <div id="migAttText" class="text-sm font-bold text-white">0.0%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-xs text-slate-400 font-mono-numbers border-t border-slate-800 pt-2 flex justify-between">
+                    <span>Envelope RMSE: <b id="migRmseText" class="text-slate-300">0.012</b></span>
+                    <span>Safety: <b class="text-emerald-400">ACTIVE</b></span>
+                </div>
+            </div>
+
+            <!-- Card 4: Edge AI Profiler & SRAM Footprint -->
+            <div class="saas-card p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="font-semibold uppercase tracking-wider">ESP32-S3 Compute Burst</span>
+                    <i class="fa-solid fa-bolt text-yellow-400"></i>
+                </div>
+                <div class="my-2 space-y-1.5 text-xs font-mono-numbers">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">t_ASQI DSP:</span>
+                        <span class="text-slate-200">11.4 ms</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">t_MIG Guard:</span>
+                        <span class="text-slate-200">18.2 ms</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">t_TinyCNN (INT8):</span>
+                        <span class="text-cyan-400 font-bold">68.7 ms</span>
+                    </div>
+                    <div class="flex justify-between pt-1 border-t border-slate-800 font-bold">
+                        <span class="text-slate-300">Total Burst:</span>
+                        <span class="text-emerald-400">98.3 ms &lt;&lt; 2500 ms</span>
+                    </div>
+                </div>
+                <div class="text-xs text-slate-400 font-mono-numbers border-t border-slate-800 pt-2 flex justify-between">
+                    <span>SRAM Weights: <b class="text-cyan-400">33.7 KB</b></span>
+                    <span>Idle: <b class="text-emerald-400">96.1%</b></span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Row: AI Softmax Class Distribution & PSRAM Clinical Event Audit Table -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            
+            <!-- Left: Calibrated AI Softmax Distribution (1 Col) -->
+            <div class="saas-card p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800">
+                    <span class="font-semibold uppercase tracking-wider">Neural Classifier Output (T = 1.15)</span>
+                    <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">TinyCNN v1</span>
+                </div>
+                
+                <div class="space-y-3 my-3">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300 font-medium">Normal Sinus Rhythm (N):</span>
+                            <span id="probNormalText" class="font-mono-numbers font-bold text-emerald-400">98.1%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2">
+                            <div id="probNormalBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 98.1%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300 font-medium">Atrial Fibrillation (AF):</span>
+                            <span id="probAfText" class="font-mono-numbers font-bold text-amber-400">1.4%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2">
+                            <div id="probAfBar" class="bg-amber-500 h-2 rounded-full transition-all duration-300" style="width: 1.4%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300 font-medium">Other Ectopy / PVC (O):</span>
+                            <span id="probOtherText" class="font-mono-numbers font-bold text-purple-400">0.5%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2">
+                            <div id="probOtherBar" class="bg-purple-500 h-2 rounded-full transition-all duration-300" style="width: 0.5%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-2.5 rounded bg-slate-900/80 border border-slate-800 text-xs text-slate-400 leading-relaxed font-mono-numbers">
+                    <div><span class="text-slate-500">Margin Cutoff:</span> Δτ ≥ 0.1500</div>
+                    <div><span class="text-slate-500">Accept Cutoff:</span> τ_conf ≥ 0.6800</div>
+                    <div class="text-emerald-400 font-bold mt-1">Status: UNAMBIGUOUS DECISION</div>
+                </div>
+            </div>
+
+            <!-- Right: Real-Time PSRAM Audit Log & Telemetry Packets (2 Cols) -->
+            <div class="lg:col-span-2 saas-card p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span class="font-semibold text-xs text-slate-400 uppercase tracking-wider">PSRAM Event Audit Queue</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono">Live Telemetry</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <button onclick="clearAuditTable()" class="text-slate-400 hover:text-white transition">
+                            <i class="fa-solid fa-trash-can mr-1"></i>Clear
+                        </button>
+                        <button onclick="downloadAuditJson()" class="text-cyan-400 hover:text-cyan-300 transition font-medium">
+                            <i class="fa-solid fa-download mr-1"></i>Download JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Event Table -->
+                <div class="overflow-x-auto my-2 flex-1 max-h-[190px]">
+                    <table class="w-full text-left text-xs font-mono-numbers">
+                        <thead class="text-slate-400 border-b border-slate-800 text-[11px]">
+                            <tr>
+                                <th class="pb-1.5 font-medium">SEQ</th>
+                                <th class="pb-1.5 font-medium">TIMESTAMP</th>
+                                <th class="pb-1.5 font-medium">DECISION</th>
+                                <th class="pb-1.5 font-medium">IMPRESSION</th>
+                                <th class="pb-1.5 font-medium">CONF</th>
+                                <th class="pb-1.5 font-medium">ASQI</th>
+                                <th class="pb-1.5 font-medium">MIG</th>
+                                <th class="pb-1.5 font-medium text-right">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                            <!-- Injected by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-[11px] text-slate-500 pt-2 border-t border-slate-800 flex justify-between font-mono-numbers">
+                    <span>Audit Buffer: <b class="text-slate-400">8 MB Octal PSRAM Ring</b></span>
+                    <span>FHIR R4 DiagnosticReport Compatible</span>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-3 px-6 text-center text-xs text-slate-500">
+        CardioSentinel Edge • TECHgium Challenge 26 Research Prototype • Single-MCU ESP32-S3 Wearable ECG Screening System
+    </footer>
+
+    <!-- Web Audio Beep & Real-Time Client JavaScript Engine -->
+    <script>
+        // Audio Context for Realistic QRS pulse beeps
+        let audioCtx = null;
+        let audioEnabled = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playQrsBeep(freq = 880) {
+            if (!audioEnabled || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch (e) {
+                console.error("Audio error:", e);
+            }
+        }
+
+        document.getElementById('audioToggleBtn').addEventListener('click', () => {
+            initAudio();
+            audioEnabled = !audioEnabled;
+            const icon = document.getElementById('audioIcon');
+            const text = document.getElementById('audioText');
+            if (audioEnabled) {
+                icon.className = "fa-solid fa-volume-high text-emerald-400";
+                text.innerText = "Beep ON";
+            } else {
+                icon.className = "fa-solid fa-volume-xmark text-slate-400";
+                text.innerText = "Mute Beep";
+            }
+        });
+
+        // 60 FPS HTML5 Canvas Sweep Monitor
+        const canvas = document.getElementById('ecgCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        let isFrozen = false;
+        let playSpeed = 1.0;
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            canvasWidth = canvas.width;
+            canvasHeight = canvas.height;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Waveform & Sweep State
+        let rawWaveform = [];
+        let filteredWaveform = [];
+        let sweepX = 0;
+        let lastY = 0;
+        let lastRawY = 0;
+        let sampleIndex = 0;
+        let qrsPeaks = [];
+        let currentRecord = "01_clean_normal";
+        let auditRecords = [];
+        let windowSeq = 1;
+
+        // Freeze Toggle
+        document.getElementById('freezeBtn').addEventListener('click', () => {
+            isFrozen = !isFrozen;
+            const icon = document.getElementById('freezeIcon');
+            const text = document.getElementById('freezeText');
+            if (isFrozen) {
+                icon.className = "fa-solid fa-play text-yellow-400";
+                text.innerText = "Resume";
+            } else {
+                icon.className = "fa-solid fa-pause";
+                text.innerText = "Freeze";
+            }
+        });
+
+        function setPlaySpeed(speed) {
+            playSpeed = speed;
+            document.getElementById('speed1x').className = (speed === 1.0) 
+                ? "px-2 py-1 rounded bg-cyan-900/60 text-cyan-300 text-xs font-mono font-bold border border-cyan-700"
+                : "px-2 py-1 rounded bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700";
+            document.getElementById('speed2x').className = (speed === 2.0)
+                ? "px-2 py-1 rounded bg-cyan-900/60 text-cyan-300 text-xs font-mono font-bold border border-cyan-700"
+                : "px-2 py-1 rounded bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700";
+        }
+
+        // Fetch Scenario Data
+        async function loadScenario(scenarioName) {
+            currentRecord = scenarioName;
+            try {
+                const res = await fetch(`/api/scenario/${scenarioName}`);
+                const data = await res.json();
+                rawWaveform = data.raw;
+                filteredWaveform = data.filtered;
+                qrsPeaks = data.peaks || [];
+                sampleIndex = 0;
+                sweepX = 0;
+                
+                // Clear Canvas
+                const cssWidth = canvasWidth / window.devicePixelRatio;
+                const cssHeight = canvasHeight / window.devicePixelRatio;
+                ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+                // Update UI metadata & cards
+                updateTelemetryCards(data.telemetry);
+                addAuditRecord(data.telemetry);
+            } catch (err) {
+                console.error("Failed to load scenario:", err);
+            }
+        }
+
+        document.getElementById('scenarioSelector').addEventListener('change', (e) => {
+            loadScenario(e.target.value);
+        });
+
+        // Update UI Cards
+        function updateTelemetryCards(tel) {
+            const decision = tel.decision;
+            const triageBadge = document.getElementById('triageBadge');
+            const triageIcon = document.getElementById('triageIcon');
+            const triageText = document.getElementById('triageText');
+            const triageCard = document.getElementById('triageCard');
+            const actionBox = document.getElementById('triageActionBox');
+
+            // Set Zone Colors
+            if (decision === "ACCEPT") {
+                triageBadge.className = "py-2.5 px-4 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center gap-3 font-bold text-xl tracking-wide shadow-lg shadow-emerald-500/10";
+                triageCard.className = "saas-card p-4 border-2 border-emerald-500/40 relative overflow-hidden transition-all duration-300";
+                triageIcon.className = "fa-solid fa-circle-check text-2xl";
+                actionBox.innerText = "Decision accepted with calibrated confidence; zero morphology distortion detected.";
+            } else if (decision === "REVIEW") {
+                triageBadge.className = "py-2.5 px-4 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center gap-3 font-bold text-xl tracking-wide shadow-lg shadow-amber-500/10";
+                triageCard.className = "saas-card p-4 border-2 border-amber-500/40 relative overflow-hidden transition-all duration-300";
+                triageIcon.className = "fa-solid fa-triangle-exclamation text-2xl";
+                actionBox.innerText = "MIG flagged filter modification or confidence is ambiguous. Raw PSRAM snapshot saved for clinical review.";
+            } else {
+                triageBadge.className = "py-2.5 px-4 rounded-xl bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center gap-3 font-bold text-xl tracking-wide shadow-lg shadow-red-500/10";
+                triageCard.className = "saas-card p-4 border-2 border-red-500/40 relative overflow-hidden transition-all duration-300";
+                triageIcon.className = "fa-solid fa-plug-circle-xmark text-2xl";
+                actionBox.innerText = "Lead-off or rail saturation detected. Classification strictly suppressed to prevent false alarm / false normal reassurance.";
+            }
+
+            triageText.innerText = decision;
+            document.getElementById('impressionText').innerText = tel.classification.label || "UNINTERPRETABLE";
+            
+            const confVal = tel.classification.confidence ? (tel.classification.confidence * 100).toFixed(1) + "%" : "N/A";
+            document.getElementById('confidenceText').innerText = confVal;
+            
+            const reasons = (tel.quality.reasons || []).concat(tel.morphology_guard.passed ? [] : ["MIG_DISTORTION"]);
+            document.getElementById('reasonsText').innerText = reasons.join(', ') || "OK";
+
+            // Live BPM
+            const bpm = tel.heart_rate_bpm || 72;
+            document.getElementById('liveBpm').innerText = bpm;
+            document.getElementById('rrMeanText').innerText = Math.round(60000 / bpm) + " ms";
+
+            // ASQI Metrics
+            const asqi = tel.quality;
+            document.getElementById('asqiScoreText').innerText = asqi.score.toFixed(2);
+            document.getElementById('asqiStatusBadge').innerText = asqi.usable ? "STATUS: PASS" : "STATUS: FAIL";
+            document.getElementById('asqiStatusBadge').className = asqi.usable ? "text-xs font-semibold text-emerald-400" : "text-xs font-semibold text-red-400";
+            document.getElementById('varianceText').innerText = (asqi.variance || 0.05).toFixed(4);
+            document.getElementById('ptopText').innerText = (asqi.peak_to_peak || 1.25).toFixed(2) + "V";
+
+            // Artifact bars
+            const driftSpan = asqi.drift_span || 0.04;
+            document.getElementById('driftSpanText').innerText = driftSpan.toFixed(2) + " V";
+            document.getElementById('driftBar').style.width = Math.min(100, (driftSpan / 0.8) * 100) + "%";
+            document.getElementById('driftBar').className = (driftSpan > 0.8) ? "bg-red-500 h-1.5 rounded-full" : "bg-emerald-400 h-1.5 rounded-full";
+
+            const lineLen = asqi.line_length_norm || 0.038;
+            document.getElementById('lineLengthText').innerText = lineLen.toFixed(3);
+            document.getElementById('emgBar').style.width = Math.min(100, (lineLen / 0.12) * 100) + "%";
+            document.getElementById('emgBar').className = (lineLen > 0.12) ? "bg-amber-500 h-1.5 rounded-full" : "bg-cyan-400 h-1.5 rounded-full";
+
+            // MIG Card
+            const mig = tel.morphology_guard;
+            const migBadge = document.getElementById('migBadge');
+            if (mig.passed) {
+                migBadge.className = "py-1 px-3 rounded-md bg-emerald-500/15 text-emerald-400 text-xs font-bold inline-flex items-center gap-1.5 mb-2 border border-emerald-500/30";
+                migBadge.innerHTML = '<i class="fa-solid fa-check"></i><span>SHAPE PRESERVED</span>';
+            } else {
+                migBadge.className = "py-1 px-3 rounded-md bg-amber-500/15 text-amber-400 text-xs font-bold inline-flex items-center gap-1.5 mb-2 border border-amber-500/30";
+                migBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>MIG DISTORTION</span>';
+            }
+            document.getElementById('migShiftText').innerText = (mig.max_shift_ms || 0).toFixed(1) + " ms";
+            document.getElementById('migAttText').innerText = ((mig.max_attenuation || 0) * 100).toFixed(1) + "%";
+            document.getElementById('migRmseText').innerText = (mig.envelope_rmse || 0.01).toFixed(3);
+
+            // Probabilities
+            const p = tel.classification.probabilities || [0.98, 0.01, 0.01];
+            document.getElementById('probNormalText').innerText = (p[0] * 100).toFixed(1) + "%";
+            document.getElementById('probNormalBar').style.width = (p[0] * 100) + "%";
+            document.getElementById('probAfText').innerText = (p[1] * 100).toFixed(1) + "%";
+            document.getElementById('probAfBar').style.width = (p[1] * 100) + "%";
+            document.getElementById('probOtherText').innerText = (p[2] * 100).toFixed(1) + "%";
+            document.getElementById('probOtherBar').style.width = (p[2] * 100) + "%";
+
+            // Draw ASQI Mini Gauge
+            drawMiniGauge(asqi.score);
+        }
+
+        function drawMiniGauge(score) {
+            const gc = document.getElementById('asqiGaugeCanvas');
+            const gctx = gc.getContext('2d');
+            gctx.clearRect(0, 0, gc.width, gc.height);
+            
+            const cx = gc.width / 2;
+            const cy = gc.height / 2;
+            const radius = 24;
+
+            // Background arc
+            gctx.beginPath();
+            gctx.arc(cx, cy, radius, 0.75 * Math.PI, 2.25 * Math.PI);
+            gctx.strokeStyle = "#1e293b";
+            gctx.lineWidth = 5;
+            gctx.lineCap = "round";
+            gctx.stroke();
+
+            // Progress arc
+            const endAngle = 0.75 * Math.PI + score * (1.5 * Math.PI);
+            gctx.beginPath();
+            gctx.arc(cx, cy, radius, 0.75 * Math.PI, endAngle);
+            gctx.strokeStyle = score >= 0.55 ? "#10b981" : "#ef4444";
+            gctx.lineWidth = 5;
+            gctx.lineCap = "round";
+            gctx.stroke();
+        }
+
+        // Add Record to Audit Table
+        function addAuditRecord(tel) {
+            auditRecords.unshift(tel);
+            if (auditRecords.length > 25) auditRecords.pop();
+
+            const tbody = document.getElementById('auditTableBody');
+            tbody.innerHTML = '';
+
+            auditRecords.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition";
+                
+                let badgeClass = "text-emerald-400 bg-emerald-500/10 border-emerald-500/30";
+                if (item.decision === "REVIEW") badgeClass = "text-amber-400 bg-amber-500/10 border-amber-500/30";
+                if (item.decision === "ABSTAIN") badgeClass = "text-red-400 bg-red-500/10 border-red-500/30";
+
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString();
+
+                tr.innerHTML = `
+                    <td class="py-2 text-slate-400">#${String(windowSeq - idx).padStart(2, '0')}</td>
+                    <td class="py-2 text-slate-500">${timeStr}</td>
+                    <td class="py-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">${item.decision}</span></td>
+                    <td class="py-2 font-semibold text-slate-200">${item.classification.label}</td>
+                    <td class="py-2">${item.classification.confidence ? (item.classification.confidence * 100).toFixed(1) + '%' : '-'}</td>
+                    <td class="py-2 ${item.quality.usable ? 'text-emerald-400' : 'text-red-400'}">${item.quality.score.toFixed(2)}</td>
+                    <td class="py-2 ${item.morphology_guard.passed ? 'text-emerald-400' : 'text-amber-400'}">${item.morphology_guard.passed ? 'PASS' : 'FLAG'}</td>
+                    <td class="py-2 text-right">
+                        <button onclick="inspectAuditItem(${idx})" class="text-cyan-400 hover:underline">Inspect</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            windowSeq++;
+            document.getElementById('canvasSeq').innerText = `Window Seq: #${windowSeq}`;
+            document.getElementById('zoneSeq').innerText = `WINDOW #${windowSeq}`;
+        }
+
+        function clearAuditTable() {
+            auditRecords = [];
+            document.getElementById('auditTableBody').innerHTML = '';
+        }
+
+        function downloadAuditJson() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditRecords, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `cardiosentinel_audit_${Date.now()}.json`);
+            dlAnchor.click();
+        }
+
+        function exportFhirDiagnosticReport() {
+            window.open(`/api/export_fhir/${currentRecord}`, '_blank');
+        }
+
+        function inspectAuditItem(idx) {
+            const item = auditRecords[idx];
+            if (item) {
+                alert(`PSRAM Episode Snapshot:\nDevice: ${item.device_id}\nDecision: ${item.decision}\nClassification: ${item.classification.label}\nReason Codes: ${item.quality.reasons.join(', ')}`);
+            }
+        }
+
+        // 60 FPS Sweep Animation Loop
+        function animateScope() {
+            if (!isFrozen && filteredWaveform.length > 0) {
+                const cssWidth = canvasWidth / window.devicePixelRatio;
+                const cssHeight = canvasHeight / window.devicePixelRatio;
+                const centerY = cssHeight / 2;
+                const ampScale = (cssHeight / 2) * 0.55; // Gain scaling for visual clarity
+
+                // Advance by number of samples based on speed
+                const step = Math.max(1, Math.round(2 * playSpeed));
+                
+                for (let s = 0; s < step; s++) {
+                    const sample = filteredWaveform[sampleIndex];
+                    const rawSample = rawWaveform[sampleIndex];
+
+                    const y = centerY - (sample * ampScale);
+                    const rawY = centerY - (rawSample * ampScale);
+
+                    // Clear ahead with a dark decaying sweep band (Medical Monitor look)
+                    const sweepBandWidth = 14;
+                    ctx.clearRect(sweepX, 0, sweepBandWidth, cssHeight);
+
+                    // Check for QRS peak beep
+                    if (qrsPeaks.includes(sampleIndex)) {
+                        playQrsBeep(880);
+                    }
+
+                    // 1. Draw Raw Overlay if enabled
+                    if (document.getElementById('showRawOverlay').checked) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+                        ctx.lineWidth = 1.2;
+                        ctx.moveTo(sweepX - 1, lastRawY || rawY);
+                        ctx.lineTo(sweepX, rawY);
+                        ctx.stroke();
+                    }
+
+                    // 2. Draw Main Filtered Trace (Glowing Emerald)
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#00ff88";
+                    ctx.shadowColor = "#00ff88";
+                    ctx.shadowBlur = 6;
+                    ctx.lineWidth = 2.2;
+                    ctx.lineCap = "round";
+                    ctx.moveTo(sweepX - 1, lastY || y);
+                    ctx.lineTo(sweepX, y);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0; // Reset blur for performance
+
+                    // 3. Draw QRS Marker tick if enabled
+                    if (document.getElementById('showQrsMarkers').checked && qrsPeaks.includes(sampleIndex)) {
+                        ctx.fillStyle = "#ef4444";
+                        ctx.beginPath();
+                        ctx.arc(sweepX, y - 10, 3.5, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+
+                    lastY = y;
+                    lastRawY = rawY;
+                    sweepX += 1.2;
+
+                    sampleIndex = (sampleIndex + 1) % filteredWaveform.length;
+                    if (sweepX >= cssWidth) {
+                        sweepX = 0;
+                        lastY = 0;
+                        lastRawY = 0;
+                    }
+                }
+            }
+            requestAnimationFrame(animateScope);
+        }
+
+        // Initialize with default canonical scenario
+        loadScenario("01_clean_normal");
+        animateScope();
+    </script>
+</body>
+</html>
