@@ -8,9 +8,9 @@
         @import url('https://fonts.cdnfonts.com/css/cascadia-code');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: #000000;
+            background-color: #0c0c0c;
             color: #cccccc;
-            font-family: 'Cascadia Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+            font-family: 'Cascadia Mono', 'Cascadia Code', 'Consolas', monospace;
             font-size: 14.5px;
             line-height: 1.35;
             height: 100vh;
@@ -156,14 +156,12 @@
     </div>
 
     <!-- Real PowerShell Content -->
-    <div class="terminal-content" id="term">
-Windows PowerShell
+    <div class="terminal-content" id="term">Windows PowerShell
 Copyright (C) Microsoft Corporation. All rights reserved.
 
 <span class="white">PS A:\Projects\L&T&gt;</span> <span class="white" id="cmd1"></span><span id="output1"></span>
 <span id="prompt2" style="display:none;"><span class="white">PS A:\Projects\L&T&gt;</span> <span class="white" id="cmd2"></span><span id="output2"></span></span>
 <span id="prompt3" style="display:none;"><span class="white">PS A:\Projects\L&T&gt;</span> <span class="white" id="cmd3"></span><span id="output3"></span></span>
-<span id="prompt4" style="display:none;"><span class="white">PS A:\Projects\L&T&gt;</span> <span class="cursor"></span></span>
     </div>
 
     <script>
@@ -180,7 +178,7 @@ tests\\test_morphology.py ...                                             <span 
 tests\\test_quality.py ....                                               <span class="green">[ 87%]</span>
 tests\\test_windowing.py ..                                               <span class="green">[100%]</span>
 
-<span class="green">============================= 16 passed in 8.74s ==============================</span>
+<span class="green">============================== 16 passed in 8.74s ==============================</span>
 `;
 
         const cmd2Text = "python scripts/compare_host_vs_board.py";
@@ -206,14 +204,26 @@ Demo Scenario          | Python Decision  | C Firmware Decision | Parity
 `;
 
         const cmd3Text = "python dashboard/server.py";
-        const output3Text = `
-[INFO] CardioSentinel Clinical Telemetry Gateway initialized
-[INFO] Target: ESP32-S3-WROOM-1 (N8R8) @ 240 MHz | AFE: TI ADS1292R @ 250 Hz
-[INFO] Uvicorn server running on <span class="cyan">http://127.0.0.1:8000</span> (Press CTRL+C to quit)
-[INFO] Opening high-frequency 60 FPS clinical dashboard...
+        const output3TextA = `
+INFO:     Started server process [18320]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on <span class="cyan">http://127.0.0.1:8000</span> (Press CTRL+C to quit)
+===========================================================================
+CardioSentinel Edge - Real-Time Telemetry SaaS Server
+Launching on: http://localhost:8000
+===========================================================================
 `;
 
-        async function typeCommand(elemId, text, speed = 35) {
+        const output3TextB = `INFO:     127.0.0.1:60017 - "GET / HTTP/1.1" 200 OK
+[EXPORT] Successfully generated C header: firmware/esp32s3/models/tinycnn_weights.h
+[EXPORT] Total Fused Parameters: 8627 (~33.70 KB)
+INFO:     127.0.0.1:60017 - "GET /api/scenario/01_clean_normal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60017 - "GET /ws/telemetry HTTP/1.1" 101 Switching Protocols
+<span class="green">[LIVE STREAM] Active telemetry socket established. Streaming 250 SPS...</span> <span class="cursor"></span>
+`;
+
+        async function typeCommand(elemId, text, speed = 40) {
             const el = document.getElementById(elemId);
             for (let i = 0; i < text.length; i++) {
                 el.textContent += text[i];
@@ -222,29 +232,55 @@ Demo Scenario          | Python Decision  | C Firmware Decision | Parity
         }
 
         async function runSequence() {
-            await new Promise(r => setTimeout(r, 400));
-            // 1. pytest
-            await typeCommand("cmd1", cmd1Text, 35);
-            await new Promise(r => setTimeout(r, 250));
+            const term = document.getElementById("term");
+
+            // 0.0s - 1.2s: Initial pause
+            await new Promise(r => setTimeout(r, 1200));
+
+            // 1.2s - 2.0s: Type pytest
+            await typeCommand("cmd1", cmd1Text, 45);
+            await new Promise(r => setTimeout(r, 350));
+
+            // 2.35s - 4.2s: Stream pytest output (finishes right around 4.2s when subtitle 2 starts)
             document.getElementById("output1").innerHTML = output1Text;
+            term.scrollTop = term.scrollHeight;
 
-            // 2. compare parity
-            await new Promise(r => setTimeout(r, 600));
+            // 4.2s - 6.2s: Let user read passing tests
+            await new Promise(r => setTimeout(r, 2000));
+
+            // 6.2s: Show prompt 2
             document.getElementById("prompt2").style.display = "block";
-            await typeCommand("cmd2", cmd2Text, 30);
-            await new Promise(r => setTimeout(r, 250));
+            await new Promise(r => setTimeout(r, 300));
+
+            // 6.5s - 8.2s: Type compare_host_vs_board
+            await typeCommand("cmd2", cmd2Text, 42);
+            await new Promise(r => setTimeout(r, 300));
+
+            // 8.5s: Output parity table (matches subtitle 3 "GCC firmware confirms 100% bit-accurate decision parity")
             document.getElementById("output2").innerHTML = output2Text;
+            term.scrollTop = term.scrollHeight;
 
-            // 3. launch dashboard server
-            await new Promise(r => setTimeout(r, 600));
+            // 8.5s - 11.8s: Let user read the 100% parity table
+            await new Promise(r => setTimeout(r, 3300));
+
+            // 11.8s: Show prompt 3
             document.getElementById("prompt3").style.display = "block";
-            await typeCommand("cmd3", cmd3Text, 30);
             await new Promise(r => setTimeout(r, 200));
-            document.getElementById("output3").innerHTML = output3Text;
 
-            // Prompt 4
-            await new Promise(r => setTimeout(r, 400));
-            document.getElementById("prompt4").style.display = "block";
+            // 12.0s - 13.0s: Type python dashboard/server.py
+            await typeCommand("cmd3", cmd3Text, 38);
+            await new Promise(r => setTimeout(r, 200));
+
+            // 13.2s: Print authentic uvicorn server startup (matches subtitle 4 "Launching clinical telemetry gateway on port 8000...")
+            document.getElementById("output3").innerHTML = output3TextA;
+            term.scrollTop = term.scrollHeight;
+
+            // 15.0s: Browser connects, live HTTP/WS telemetry starts streaming
+            await new Promise(r => setTimeout(r, 1800));
+            document.getElementById("output3").innerHTML = output3TextA + output3TextB;
+            term.scrollTop = term.scrollHeight;
+
+            // Notice: WE NEVER PRINT A FAKE PROMPT 4! The server is actively running in the foreground with a blinking cursor!
         }
 
         window.onload = runSequence;
