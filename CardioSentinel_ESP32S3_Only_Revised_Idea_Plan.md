@@ -195,7 +195,7 @@ All four variants must use the same test records and fixed event definitions. Sh
 | **SPI DMA acquisition buffers** | Internal DMA-capable RAM | Dual ping-pong buffers (~2 KB); required for hardware DMA |
 | **Active 10 s sliding circular buffer** | Internal SRAM | 2,500 samples × 4 bytes (float) ≈ 10 KB |
 | **ASQI and MIG working structures** | Internal SRAM | Peak ~15–20 KB scratch space for linear-time feature extraction |
-| **TFLite Micro / ESP-DL tensor arena** | Internal SRAM (if fits) | Target ≤ 120–160 KB for INT8 quantized 1D-CNN |
+| **Hardware FPU Model Arena** | Internal SRAM (Zero-Wait) | ~34 KB for Native FP32 1D-CNN (8,627 parameters, zero quantization loss) |
 | **Long-term trace logs & BLE queues** | External PSRAM | Multi-megabyte buffer; prevents heap starvation of real-time tasks |
 | **Raw audit episodes (Review/Abstain)** | External PSRAM / SPI Flash | Preserved uncompressed for auditable dashboard export |
 
