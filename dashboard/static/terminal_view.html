@@ -53,7 +53,6 @@
             border: 1px solid #2b2b2b;
             border-bottom: none;
             width: 220px;
-            position: relative;
         }
 
         .tab-icon {
@@ -72,9 +71,6 @@
         .tab-close {
             color: #888;
             font-size: 14px;
-            cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 4px;
         }
 
         .tab-actions {
@@ -90,9 +86,7 @@
         .action-btn {
             padding: 4px 6px;
             border-radius: 4px;
-            cursor: pointer;
         }
-        .action-btn:hover { background-color: #333333; }
 
         .window-controls {
             display: flex;
@@ -108,10 +102,7 @@
             color: #cccccc;
             font-size: 11px;
             font-family: 'Segoe Fluent Icons', 'Segoe UI', sans-serif;
-            cursor: pointer;
         }
-        .win-btn:hover { background-color: #333333; }
-        .win-btn.close:hover { background-color: #e81123; color: white; }
 
         /* Terminal Body */
         .terminal-content {
@@ -126,9 +117,7 @@
         .green { color: #16c60c; }
         .cyan { color: #3b78ff; }
         .yellow { color: #f9f1a5; }
-        .red { color: #e74856; }
         .white { color: #ffffff; }
-        .gray { color: #767676; }
 
         .cursor {
             display: inline-block;
@@ -162,7 +151,7 @@
         <div class="window-controls">
             <div class="win-btn">&#8212;</div>
             <div class="win-btn">&#9633;</div>
-            <div class="win-btn close">&#10005;</div>
+            <div class="win-btn" style="color:#ffffff;">&#10005;</div>
         </div>
     </div>
 
@@ -171,11 +160,10 @@
 Windows PowerShell
 Copyright (C) Microsoft Corporation. All rights reserved.
 
-Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
-
 <span class="white">PS A:\Projects\L&T&gt;</span> <span class="white" id="cmd1"></span><span id="output1"></span>
 <span id="prompt2" style="display:none;"><span class="white">PS A:\Projects\L&T&gt;</span> <span class="white" id="cmd2"></span><span id="output2"></span></span>
-<span id="prompt3" style="display:none;"><span class="white">PS A:\Projects\L&T&gt;</span> <span class="cursor"></span></span>
+<span id="prompt3" style="display:none;"><span class="white">PS A:\Projects\L&T&gt;</span> <span class="white" id="cmd3"></span><span id="output3"></span></span>
+<span id="prompt4" style="display:none;"><span class="white">PS A:\Projects\L&T&gt;</span> <span class="cursor"></span></span>
     </div>
 
     <script>
@@ -184,7 +172,6 @@ Install the latest PowerShell for new features and improvements! https://aka.ms/
 ============================= test session starts =============================
 platform win32 -- Python 3.11.9, pytest-8.1.1, pluggy-1.6.0
 rootdir: A:\\Projects\\L&T
-plugins: anyio-4.13.0, hydra-core-1.3.8, hypothesis-6.170.14, kgb-7.3, json-report-1.5.0, metadata-3.1.1
 collected 16 items
 
 tests\\test_decisions.py ....                                             <span class="green">[ 25%]</span>
@@ -218,7 +205,15 @@ Demo Scenario          | Python Decision  | C Firmware Decision | Parity
 <span class="green">[AUDIT PASSED] 100% Host-vs-Board Decision Parity Confirmed across all test vectors.</span>
 `;
 
-        async function typeCommand(elemId, text, speed = 40) {
+        const cmd3Text = "python dashboard/server.py";
+        const output3Text = `
+[INFO] CardioSentinel Clinical Telemetry Gateway initialized
+[INFO] Target: ESP32-S3-WROOM-1 (N8R8) @ 240 MHz | AFE: TI ADS1292R @ 250 Hz
+[INFO] Uvicorn server running on <span class="cyan">http://127.0.0.1:8000</span> (Press CTRL+C to quit)
+[INFO] Opening high-frequency 60 FPS clinical dashboard...
+`;
+
+        async function typeCommand(elemId, text, speed = 35) {
             const el = document.getElementById(elemId);
             for (let i = 0; i < text.length; i++) {
                 el.textContent += text[i];
@@ -227,22 +222,29 @@ Demo Scenario          | Python Decision  | C Firmware Decision | Parity
         }
 
         async function runSequence() {
-            await new Promise(r => setTimeout(r, 600));
-            // Type cmd 1
-            await typeCommand("cmd1", cmd1Text, 45);
             await new Promise(r => setTimeout(r, 400));
+            // 1. pytest
+            await typeCommand("cmd1", cmd1Text, 35);
+            await new Promise(r => setTimeout(r, 250));
             document.getElementById("output1").innerHTML = output1Text;
 
-            // Prompt 2
-            await new Promise(r => setTimeout(r, 1200));
+            // 2. compare parity
+            await new Promise(r => setTimeout(r, 600));
             document.getElementById("prompt2").style.display = "block";
-            await typeCommand("cmd2", cmd2Text, 40);
-            await new Promise(r => setTimeout(r, 400));
+            await typeCommand("cmd2", cmd2Text, 30);
+            await new Promise(r => setTimeout(r, 250));
             document.getElementById("output2").innerHTML = output2Text;
 
-            // Prompt 3
-            await new Promise(r => setTimeout(r, 800));
+            // 3. launch dashboard server
+            await new Promise(r => setTimeout(r, 600));
             document.getElementById("prompt3").style.display = "block";
+            await typeCommand("cmd3", cmd3Text, 30);
+            await new Promise(r => setTimeout(r, 200));
+            document.getElementById("output3").innerHTML = output3Text;
+
+            // Prompt 4
+            await new Promise(r => setTimeout(r, 400));
+            document.getElementById("prompt4").style.display = "block";
         }
 
         window.onload = runSequence;

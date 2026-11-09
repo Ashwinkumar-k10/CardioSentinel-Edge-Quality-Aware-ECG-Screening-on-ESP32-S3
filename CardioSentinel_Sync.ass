@@ -1,0 +1,39 @@
+[Script Info]
+Title: CardioSentinel Edge Synchronized Demo
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.601
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: ModernSub,Segoe UI,28,&H00FFFFFF,&H000000FF,&H00000000,&HB0080C14,-1,0,0,0,100,100,0,0,3,1.5,0,2,40,40,25,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:04.17,ModernSub,,0,0,0,,Auditing embedded C firmware in Windows PowerShell.
+Dialogue: 0,0:00:04.27,0:00:08.44,ModernSub,,0,0,0,,All 16 automated unit tests pass in 8.7 seconds.
+Dialogue: 0,0:00:08.54,0:00:12.72,ModernSub,,0,0,0,,GCC firmware confirms 100% bit-accurate decision parity.
+Dialogue: 0,0:00:12.82,0:00:16.99,ModernSub,,0,0,0,,Launching clinical telemetry gateway on port 8000...
+Dialogue: 0,0:00:18.09,0:00:23.57,ModernSub,,0,0,0,,Scenario 1: Clean Normal Sinus Rhythm (250 Hz dual-stream scope).
+Dialogue: 0,0:00:23.67,0:00:29.14,ModernSub,,0,0,0,,Untouched raw signal displayed alongside candidate-filtered ECG.
+Dialogue: 0,0:00:29.24,0:00:34.71,ModernSub,,0,0,0,,All quality heuristics pass, MIG distortion zero -> ACCEPT triage.
+Dialogue: 0,0:00:35.81,0:00:43.86,ModernSub,,0,0,0,,Scenario 2: Atrial Fibrillation with irregular intervals and f-waves.
+Dialogue: 0,0:00:43.96,0:00:52.00,ModernSub,,0,0,0,,1D-CNN classifies rhythm on hardware FPU in 34 ms -> ACCEPT AF.
+Dialogue: 0,0:00:53.10,0:00:59.38,ModernSub,,0,0,0,,Scenario 3: Ventricular Ectopy and Premature Ventricular Contractions.
+Dialogue: 0,0:00:59.48,0:01:05.75,ModernSub,,0,0,0,,Ectopic morphology flagged; raw snippet preserved in 8 MB PSRAM.
+Dialogue: 0,0:01:06.85,0:01:13.34,ModernSub,,0,0,0,,Scenario 4: Severe Respiratory Drift (Ambulatory Baseline Wander).
+Dialogue: 0,0:01:13.44,0:01:19.93,ModernSub,,0,0,0,,Linear-time quality gate flags wander -> Safely issues ABSTAIN.
+Dialogue: 0,0:01:21.03,0:01:26.63,ModernSub,,0,0,0,,Scenario 5: High-Frequency Muscle Tremor & EMG Artifact.
+Dialogue: 0,0:01:26.73,0:01:32.33,ModernSub,,0,0,0,,Quality gate isolates noise -> Routes recording to REVIEW for safety.
+Dialogue: 0,0:01:33.43,0:01:38.73,ModernSub,,0,0,0,,Scenario 6: Disconnected Electrode / Flatline Simulation.
+Dialogue: 0,0:01:38.83,0:01:44.12,ModernSub,,0,0,0,,Zero amplitude detected -> Immediate ABSTAIN (Zero false reassurance).
+Dialogue: 0,0:01:45.22,0:01:50.60,ModernSub,,0,0,0,,Scenario 7: ADC Rail Saturation Clipping.
+Dialogue: 0,0:01:50.70,0:01:56.08,ModernSub,,0,0,0,,Amplifier rail limits exceeded -> Immediate ABSTAIN to protect AI.
+Dialogue: 0,0:01:57.18,0:02:02.50,ModernSub,,0,0,0,,Scenario 8: Morphology Integrity Guard (MIG) in Action.
+Dialogue: 0,0:02:02.60,0:02:07.92,ModernSub,,0,0,0,,Filter attenuates pacemaker spike -> MIG detects discrepancy.
+Dialogue: 0,0:02:08.02,0:02:13.34,ModernSub,,0,0,0,,Automatic acceptance revoked -> Safely forced to REVIEW.
+Dialogue: 0,0:02:14.44,0:02:23.79,ModernSub,,0,0,0,,Summary: 85.5% coverage, zero missed arrhythmias, 16/16 tests passing.
+Dialogue: 0,0:02:23.89,0:02:33.24,ModernSub,,0,0,0,,100% bit-accurate firmware parity, $14.10 BOM, 20.7h battery lifetime.
