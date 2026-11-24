@@ -104,8 +104,8 @@ void app_main(void) {
     telemetry_init();
     ecg_acquire_init(&g_ring_buf);
 
-    // Start acquisition in dataset replay mode for demonstration
-    ecg_acquire_start(ACQUIRE_MODE_DATASET_REPLAY);
+    // Start acquisition with AD8232 12-bit ADC mode (GPIO 1 analog input)
+    ecg_acquire_start(ACQUIRE_MODE_AD8232_ADC);
 
     // Pin compute pipeline to Core 1
     xTaskCreatePinnedToCore(
