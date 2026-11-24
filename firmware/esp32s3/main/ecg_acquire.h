@@ -16,7 +16,8 @@
 typedef enum {
     ACQUIRE_MODE_ADS1292R_SPI = 0,    // Live SPI sampling from ADS1292R AFE via /DRDY ISR
     ACQUIRE_MODE_INTERNAL_TEST = 1,   // ADS1292R internal 1 Hz square wave test signal
-    ACQUIRE_MODE_DATASET_REPLAY = 2   // Firmware playback of pre-stored benchmark records
+    ACQUIRE_MODE_DATASET_REPLAY = 2,  // Firmware playback of pre-stored benchmark records
+    ACQUIRE_MODE_AD8232_ADC = 3       // Live 12-bit ADC sampling from AD8232 Analog Front End (GPIO 1)
 } acquire_mode_t;
 
 typedef struct {
