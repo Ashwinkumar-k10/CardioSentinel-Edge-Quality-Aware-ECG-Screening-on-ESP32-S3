@@ -14,6 +14,7 @@
  */
 
 #include <Arduino.h>
+#include "esp_timer.h"
 
 extern "C" {
 #include "ring_buffer.h"
@@ -32,7 +33,7 @@ static ecg_ring_buffer_t g_ring_buf;
 static float g_window_raw[ECG_WINDOW_SAMPLES];
 static float g_window_filtered[ECG_WINDOW_SAMPLES];
 
-static TaskHandle_t s_sample_task_handle = NULL;
+static esp_timer_handle_t s_ecg_timer = NULL;
 static uint32_t s_seq_id = 1;
 
 // 5-point moving average smoothing filter (0.5 - 40 Hz approximation)
@@ -47,29 +48,23 @@ static void apply_conservative_filter(const float *raw, float *filt, size_t n) {
     filt[n - 1] = raw[n - 1];
 }
 
-// Core 0: 250 Hz Periodic Hard Real-Time Sampler Task
-void sampleTask(void *pvParameters) {
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(4); // 4 ms = 250 Hz
+// 250 Hz Hardware Microsecond Timer Callback (Every 4000 us)
+static void IRAM_ATTR onEcgTimer(void *arg) {
+    int lo_p = digitalRead(PIN_LO_PLUS);
+    int lo_m = digitalRead(PIN_LO_MINUS);
+    int raw_adc = analogRead(PIN_ECG_OUT);
 
-    while (1) {
-        int lo_p = digitalRead(PIN_LO_PLUS);
-        int lo_m = digitalRead(PIN_LO_MINUS);
-        int raw_adc = analogRead(PIN_ECG_OUT);
-
-        float sample_mv = 0.0f;
-        if (lo_p == HIGH || lo_m == HIGH) {
-            // Electrode detached: zero out signal to force ASQI flatline detection
-            sample_mv = 0.0f;
-        } else {
-            // ESP32-S3 12-bit ADC (0 - 4095), ~1.65V mid-scale center
-            // Body surface mV with ~100x AD8232 front-end gain:
-            sample_mv = (((float)raw_adc - 2048.0f) * (3300.0f / 4095.0f)) / 100.0f;
-        }
-
-        ecg_ring_buffer_push(&g_ring_buf, sample_mv);
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    float sample_mv = 0.0f;
+    if (lo_p == HIGH || lo_m == HIGH) {
+        // Electrode detached: zero out signal to force ASQI flatline detection
+        sample_mv = 0.0f;
+    } else {
+        // ESP32-S3 12-bit ADC (0 - 4095), ~1.65V mid-scale center
+        // Body surface mV with ~100x AD8232 front-end gain:
+        sample_mv = (((float)raw_adc - 2048.0f) * (3300.0f / 4095.0f)) / 100.0f;
     }
+
+    ecg_ring_buffer_push(&g_ring_buf, sample_mv);
 }
 
 void setup() {
@@ -94,18 +89,17 @@ void setup() {
     tinycnn_inference_init();
     decision_engine_init();
 
-    // Start 250 Hz acquisition task on Core 0
-    xTaskCreatePinnedToCore(
-        sampleTask,
-        "sample_task",
-        4096,
-        NULL,
-        24,
-        &s_sample_task_handle,
-        0
-    );
+    // Start 250 Hz microsecond hardware timer (4000 us period)
+    const esp_timer_create_args_t timer_args = {
+        .callback = &onEcgTimer,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "ecg_250hz_timer"
+    };
+    esp_timer_create(&timer_args, &s_ecg_timer);
+    esp_timer_start_periodic(s_ecg_timer, 4000); // 4000 us = 250 Hz
 
-    Serial.println("[SYSTEM] Core 0 250 Hz Acquisition Initialized. Buffering initial 10s...");
+    Serial.println("[SYSTEM] Hardware 250 Hz Timer Running. Buffering initial 10s...");
 }
 
 void loop() {
